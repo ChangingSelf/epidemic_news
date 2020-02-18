@@ -41,8 +41,9 @@ class SchoolnewsSpider(scrapy.Spider):
 
     def parse_news(self,response):
         item = items.EpidemicNewsItem()
-        #item['title'] = response.xpath('//h1[contains(@class,"arti-title") or contains(@class,"arti_title")]/text()').extract_first()
+        #item['title'] = response.xpath('//h1[contains(@class,"arti-title") or contains(@class,"arti_title")]/text()').extract_first()#不适用于别的网站的文章
         item['title'] = response.xpath('//title/text()').extract_first()
+        item['url'] = response.url
         yield item
         #next_page = response.xpath('//li[contains(@class,"page_nav")]//a[contains(@class,"next")]/@href')
         '''

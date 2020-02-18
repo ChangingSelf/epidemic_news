@@ -2,10 +2,11 @@ import json
 
 def main():
     pass
-    data = json.load(open('test.json'))
-    #print(data)
-    for k in data:
-        print(k)
+    with open('test.json') as f:
+        data = json.load(f)
+        #print(data)
+        for k in data:
+            print(k)
 
 
 
