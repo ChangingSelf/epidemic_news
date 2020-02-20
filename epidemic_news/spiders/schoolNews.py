@@ -9,6 +9,8 @@ sys.path.append(parent_path)
 
 import items
 
+from scrapy.loader import ItemLoader
+
 class SchoolnewsSpider(scrapy.Spider):
     name = 'schoolNews'
     allowed_domains = ['chd.edu.cn']
@@ -21,7 +23,7 @@ class SchoolnewsSpider(scrapy.Spider):
 
     def parse(self, response):
         '''
-        解析获取所有url
+        解析获取所有url，生成Request
         '''
         # 获取当前页所有的新闻链接
         news_list = response.xpath('//ul[contains(@class,"news_list")]')
@@ -39,14 +41,24 @@ class SchoolnewsSpider(scrapy.Spider):
             # 如果还有下一页（末页的href是javascript:void(0);）
             yield scrapy.Request(next_url,callback=self.parse)
 
+
     def parse_news(self,response):
+        '''
+        解析文章内容
+        '''
+        item_loader = ItemLoader(item = items.EpidemicNewsItem(),response=response)
+        item_loader.add_xpath('title','//title/text()')
+        item_loader.add_value('url',response.url)
+
+        item = item_loader.load_item()
+
+        yield item
+
+        '''
         item = items.EpidemicNewsItem()
         #item['title'] = response.xpath('//h1[contains(@class,"arti-title") or contains(@class,"arti_title")]/text()').extract_first()#不适用于别的网站的文章
         item['title'] = response.xpath('//title/text()').extract_first()
         item['url'] = response.url
         yield item
-        #next_page = response.xpath('//li[contains(@class,"page_nav")]//a[contains(@class,"next")]/@href')
-        '''
-        In [5]: response.xpath('//*[contains(@class,"arti-title")]/text()').extract_first()
-        Out[5]: '学校召开新冠肺炎疫情防控专题工作视频会议 安排部署疫情防控相关工作'
+        
         '''
