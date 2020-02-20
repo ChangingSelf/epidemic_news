@@ -20,3 +20,12 @@
 
 
 
+## 使用
+
+命令行移动到项目文件夹中：
+
+```bash
+$scrapy crawl schoolNews -o test.json
+```
+
+用了这个之后，就会爬取【学校新闻】版块的内容到test.json里面，目前爬取到的字段在上面勾选了
