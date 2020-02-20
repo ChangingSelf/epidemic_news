@@ -54,11 +54,49 @@ class SchoolnewsSpider(scrapy.Spider):
 
         yield item
 
+    def parse_chd(self,response):
         '''
-        item = items.EpidemicNewsItem()
-        #item['title'] = response.xpath('//h1[contains(@class,"arti-title") or contains(@class,"arti_title")]/text()').extract_first()#不适用于别的网站的文章
-        item['title'] = response.xpath('//title/text()').extract_first()
-        item['url'] = response.url
+        长安大学官网
+        解析域名：www.chd.edu.cn
+        示例文章：http://www.chd.edu.cn/2020/0220/c391a121138/page.htm
+        '''
+        item_loader = ItemLoader(item = items.EpidemicNewsItem(),response=response)
+        item_loader.add_xpath('title','//title/text()')
+        item_loader.add_value('url',response.url)
+
+        item = item_loader.load_item()
+
         yield item
-        
+
+
+    def parse_chdnews(self,response):
         '''
+        长安大学新闻网
+        解析域名：news.chd.edu.cn       
+        示例文章：http://news.chd.edu.cn/2020/0203/c300a120344/page.htm
+        '''
+        pass
+
+    def parse_jyt_shaanxi(self,response):
+        '''
+        陕西省教育厅
+        解析域名：jyt.shaanxi.gov.cn
+        示例文章：http://jyt.shaanxi.gov.cn/jynews/gdxx/202002/09/96635.html
+        '''
+        pass
+
+    def parse_univs(self,response):
+        '''
+        中国大学生在线
+        解析域名：univs.cn
+        示例文章：http://www.univs.cn/zx/a/xy_gxlb/200219/1535583.shtml
+        '''
+        pass
+    
+    def parse_wechat(self,response):
+        '''
+        微信公众号
+        解析域名：mp.weixin.qq.com
+        示例文章：https://mp.weixin.qq.com/s/QD239VGRmictZPBp7kyehQ
+        '''
+        pass
