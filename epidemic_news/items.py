@@ -13,5 +13,6 @@ class EpidemicNewsItem(scrapy.Item):
     # name = scrapy.Field()
     title = scrapy.Field() # 文章标题
     url = scrapy.Field() # 原文url
+    litimg = scrapy.Field() # 缩略图
     
     pass
