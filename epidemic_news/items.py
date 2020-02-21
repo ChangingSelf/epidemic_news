@@ -7,6 +7,7 @@
 
 import scrapy
 from scrapy.loader.processors import TakeFirst
+import time
 
 class EpidemicNewsItem(scrapy.Item):
     # define the fields for your item here like:
@@ -19,7 +20,12 @@ class EpidemicNewsItem(scrapy.Item):
     url = scrapy.Field(
         output_processor = TakeFirst()#提取第一个非空元素
     ) 
+    # 更新时间（爬取时间）
+    update_time = scrapy.Field(
+        output_processor = TakeFirst()#提取第一个非空元素
+    )
+    # 文章发布时间
+    public_time = scrapy.Field()
     # 缩略图
     litimg = scrapy.Field() 
-    
-    pass
+

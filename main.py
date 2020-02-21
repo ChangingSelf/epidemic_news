@@ -16,8 +16,9 @@ def readJson(filename):
             domain = k['url']
             domain = parse_domain(domain)
             domains.add(domain)
+            print(k)
         
-        print(domains)
+        #print(domains)
 
 def parse_domain(url:str):
     return urlparse(url).netloc
