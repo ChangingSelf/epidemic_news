@@ -14,7 +14,7 @@ import os
 from epidemic_news import items
 from scrapy.loader import ItemLoader
 
-
+from urllib.parse import urlparse
 
 class SchoolnewsSpider(scrapy.Spider):
     name = 'schoolNews'
@@ -54,7 +54,8 @@ class SchoolnewsSpider(scrapy.Spider):
         if url_list != None:
             for url in url_list:
                 url = response.urljoin(url)
-                callback = self.parser_domain_map.get(self.parse_domain(url)) or self.default_parser #获取域名
+                #callback = self.parser_domain_map.get(self.parse_domain(url)) or self.default_parser #获取域名
+                callback = self.default_parser#测试语句
                 yield scrapy.Request(url,callback=callback,dont_filter=True)
 
         # 获取下一页
@@ -73,6 +74,7 @@ class SchoolnewsSpider(scrapy.Spider):
         item_loader = ItemLoader(item = items.EpidemicNewsItem(),response=response)
         item_loader.add_xpath('title','//title/text()')
         item_loader.add_value('url',response.url)
+        item_loader.add_value('update_time',time.time())
 
         item = item_loader.load_item()
 
