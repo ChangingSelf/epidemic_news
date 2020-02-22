@@ -49,3 +49,16 @@ $scrapy crawl schoolNews -o test.json
 ## 写的过程中做的一些记录(hfldqwe)
 
 - 解析函数里面还是有很多代码都是重复了(比如标题,索引,版块名称这些地方),可以进行一波修改(等写完了再改吧)
+
+
+
+## 结构设计
+
+### SchoolnewsSpider.py说明
+
+- `start_url`列表里面存放六个一级子网站的url，依次解析这几个子网站
+
+- `SchoolnewsSpider.parser()`解析一级子网站（目录）下的所有文章url，并根据域名生成不同的Request，获取完本页会继续获取下一页
+  - 域名映射字典`self.parser_domain_map`里面存放着每个域名对应的解析回调函数，在生成Request时传入
+  - 默认解析函数`self.default_parser`是在域名映射字典未找到对应的域名时，使用的解析函数
+- 

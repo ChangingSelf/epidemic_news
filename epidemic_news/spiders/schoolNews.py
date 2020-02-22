@@ -6,15 +6,18 @@ from scrapy.shell import inspect_response
 import sys
 from urllib.parse import urlparse
 import os
-# 下面这段代码我没用上,就先注释了
-# path = os.path.dirname(__file__)
-# parent_path = os.path.dirname(path)
-# sys.path.append(parent_path)
-
-from epidemic_news import items
+#'''
+#删去上方第一个#即注释此代码块
+path = os.path.dirname(__file__)
+parent_path = os.path.dirname(path)
+sys.path.append(parent_path)
+#'''
+#from epidemic_news import items#pycharm
+import items#vscode
 from scrapy.loader import ItemLoader
 
 from urllib.parse import urlparse
+import time
 
 class SchoolnewsSpider(scrapy.Spider):
     name = 'schoolNews'
@@ -29,7 +32,8 @@ class SchoolnewsSpider(scrapy.Spider):
         super().__init__(name=name, **kwargs)
 
         self.parser_domain_map = {
-            'www.chd.edu.cn/yqfk/' : self.parse_chd,
+            #注意此处是域名，改成www.chd.edu.cn/yqfk/的话大部分文章都爬不到了啊
+            'www.chd.edu.cn' : self.parse_chd,
             'news.chd.edu.cn' : self.parse_chdnews,
             'jyt.shaanxi.gov.cn' : self.parse_jyt_shanxi,
             'www.univs.cn' : self.parse_univs,
@@ -46,7 +50,7 @@ class SchoolnewsSpider(scrapy.Spider):
 
     def parse(self, response):
         '''
-        解析获取所有url，生成对应的Request
+        解析一级子网站，即目录，获取所有url，生成对应的Request
         '''
         # 获取当前页所有的新闻链接
         news_list = response.xpath('//ul[contains(@class,"news_list")]')
@@ -69,12 +73,12 @@ class SchoolnewsSpider(scrapy.Spider):
 
     def parse_news(self,response):
         '''
-        解析文章内容
+        默认解析器，解析文章内容
         '''
-        item_loader = ItemLoader(item = items.EpidemicNewsItem(),response=response)
+        item_loader = items.EpidemicNewsItemLoader(item = items.EpidemicNewsItem(),response=response)
         item_loader.add_xpath('title','//title/text()')
         item_loader.add_value('url',response.url)
-        item_loader.add_value('update_time',time.time())
+        
 
         item = item_loader.load_item()
 
@@ -99,7 +103,7 @@ class SchoolnewsSpider(scrapy.Spider):
         loader.add_value("author", article_metas[0], re='发布者：(.*)')
         loader.add_value("block_type", block_type)
         loader.add_value("content", "//div[@class='wp_articlecontent']")
-        loader.add_xpath("img", "//div[@class='wp_articlecontent']//@src")
+        #loader.add_xpath("img", "//div[@class='wp_articlecontent']//@src")
         loader.add_value("article_url", response.url)
         loader.add_value("block_type", block_type)
         loader.add_value("index", index)
@@ -159,7 +163,7 @@ class SchoolnewsSpider(scrapy.Spider):
         loader.add_value("author", '陕西省教育厅')
         loader.add_value("block_type", block_type)
         loader.add_value("content", "//div[@id='article']")
-        loader.add_xpath("img", "//div[@id='content']//@src")
+        #loader.add_xpath("img", "//div[@id='content']//@src")
         loader.add_value("article_url", response.url)
         loader.add_value("block_type", block_type)
         loader.add_value("index", index)
@@ -187,7 +191,7 @@ class SchoolnewsSpider(scrapy.Spider):
         loader.add_value("author", "//div[@class='detail_t clearfix']/span[1]//text()", re="来源：(.*?)")
         loader.add_value("block_type", block_type)
         loader.add_value("content", "//div[@class='detail-content']/div[1]")
-        loader.add_xpath("img", "//div[@class='detail-content']/div[1]//@src")
+        #loader.add_xpath("img", "//div[@class='detail-content']/div[1]//@src")
         loader.add_value("article_url", response.url)
         loader.add_value("block_type", block_type)
         loader.add_value("index", index)
@@ -210,7 +214,7 @@ class SchoolnewsSpider(scrapy.Spider):
         loader.add_value("author", "//div[@id='meta_content']/span[1]/text()") # 把左右两边的空格去掉就行
         loader.add_value("block_type", block_type)
         loader.add_value("content", "//div[@class='rich_media_content ']")
-        loader.add_xpath("img", "//div[@class='rich_media_content ']//@src")
+        #loader.add_xpath("img", "//div[@class='rich_media_content ']//@src")
         loader.add_value("article_url", response.url)
         loader.add_value("block_type", block_type)
         loader.add_value("index", index)
