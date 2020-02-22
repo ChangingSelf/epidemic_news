@@ -54,13 +54,22 @@ class SchoolnewsSpider(scrapy.Spider):
         '''
         # 获取当前页所有的新闻链接
         news_list = response.xpath('//ul[contains(@class,"news_list")]')
-        url_list = news_list.xpath('//li[contains(@class,"news")]//span[contains(@class,"news_title")]/a/@href').extract()
-        if url_list != None:
-            for url in url_list:
-                url = response.urljoin(url)
-                #callback = self.parser_domain_map.get(self.parse_domain(url)) or self.default_parser #获取域名
-                callback = self.default_parser#测试语句
-                yield scrapy.Request(url,callback=callback,dont_filter=True)
+        news_item_list = news_list.xpath('//li[contains(@class,"news")]//span[contains(@class,"news_title")]/a')
+        for news_item in news_item_list:
+            url = news_item.css('a::attr(href)').get()
+            url = response.urljoin(url)
+            title = news_item.css('a::attr(title)').get()
+            #callback = self.parser_domain_map.get(self.parse_domain(url)) or self.default_parser #获取域名
+            callback = self.default_parser#测试语句
+
+            meta = {#传给下一个解析函数的参数
+                'title':title,
+                'url':url
+            }
+            yield scrapy.Request(url,callback=callback,dont_filter=True,meta=meta)
+
+                
+                
 
         # 获取下一页
         next_page = response.xpath('//li[contains(@class,"page_nav")]//a[contains(@class,"next")]/@href')
@@ -76,7 +85,8 @@ class SchoolnewsSpider(scrapy.Spider):
         默认解析器，解析文章内容
         '''
         item_loader = items.EpidemicNewsItemLoader(item = items.EpidemicNewsItem(),response=response)
-        item_loader.add_xpath('title','//title/text()')
+        #item_loader.add_xpath('title','//title/text()')
+        item_loader.add_value('title',response.meta.get('title'))
         item_loader.add_value('url',response.url)
         
 
@@ -87,13 +97,14 @@ class SchoolnewsSpider(scrapy.Spider):
     def parse_chd(self,response):
         '''
         长安大学官网
+        正在编写
         解析域名：www.chd.edu.cn
         示例文章：http://www.chd.edu.cn/2020/0220/c391a121138/page.htm
         '''
-        loader = ItemLoader(item=items.JytShanxiItem(), response=response)
+        loader = items.EpidemicNewsItemLoader(item=items.EpidemicNewsItem(), response=response)
 
-        index = response.meta.get("index")
-        title = response.meta.get('title')
+        #index = response.meta.get("index")
+        #title = response.meta.get('title')
         block_type = response.meta.get('block_type')
 
         article_metas = response.xpath("//div[@class='article']//p[@class='arti_metas']//span//text()").extract()

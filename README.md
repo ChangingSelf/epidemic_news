@@ -60,5 +60,5 @@ $scrapy crawl schoolNews -o test.json
 
 - `SchoolnewsSpider.parser()`解析一级子网站（目录）下的所有文章url，并根据域名生成不同的Request，获取完本页会继续获取下一页
   - 域名映射字典`self.parser_domain_map`里面存放着每个域名对应的解析回调函数，在生成Request时传入
-  - 默认解析函数`self.default_parser`是在域名映射字典未找到对应的域名时，使用的解析函数
+  - 默认解析函数`self.default_parser`是在域名映射字典未找到对应的域名时，使用的解析函数，可以用于测试单个文章解析函数
 - 
