@@ -1,20 +1,24 @@
 # -*- coding: utf-8 -*-
 import scrapy
+from scrapy.http import Request
+from scrapy.shell import inspect_response
 
 import sys
+from urllib.parse import urlparse
 import os
-path = os.path.dirname(__file__)
-parent_path = os.path.dirname(path)
-sys.path.append(parent_path)
+# 下面这段代码我没用上,就先注释了
+# path = os.path.dirname(__file__)
+# parent_path = os.path.dirname(path)
+# sys.path.append(parent_path)
 
-import items
+from epidemic_news import items
 from scrapy.loader import ItemLoader
 
-from urllib.parse import urlparse
+
 
 class SchoolnewsSpider(scrapy.Spider):
     name = 'schoolNews'
-    allowed_domains = ['chd.edu.cn']
+    allowed_domains = ['chd.edu.cn', 'jyt.shaanxi.gov.cn', 'www.univs.cn', 'mp.weixin.qq.com']
     start_urls = ['http://www.chd.edu.cn/yqfk/6070/list.htm']
 
     headers = {
@@ -25,9 +29,9 @@ class SchoolnewsSpider(scrapy.Spider):
         super().__init__(name=name, **kwargs)
 
         self.parser_domain_map = {
-            'www.chd.edu.cn' : self.parse_chd,
+            'www.chd.edu.cn/yqfk/' : self.parse_chd,
             'news.chd.edu.cn' : self.parse_chdnews,
-            'jyt.shaanxi.gov.cn' : self.parse_jyt_shaanxi,
+            'jyt.shaanxi.gov.cn' : self.parse_jyt_shanxi,
             'www.univs.cn' : self.parse_univs,
             'mp.weixin.qq.com' : self.parse_wechat
         }#域名和解析函数的映射字典
@@ -80,10 +84,26 @@ class SchoolnewsSpider(scrapy.Spider):
         解析域名：www.chd.edu.cn
         示例文章：http://www.chd.edu.cn/2020/0220/c391a121138/page.htm
         '''
-        print('=================================')
-        print(sys._getframe().f_code.co_name)
-        print('=================================')
+        loader = ItemLoader(item=items.JytShanxiItem(), response=response)
 
+        index = response.meta.get("index")
+        title = response.meta.get('title')
+        block_type = response.meta.get('block_type')
+
+        article_metas = response.xpath("//div[@class='article']//p[@class='arti_metas']//span//text()").extract()
+
+        loader.add_value("title", title)
+        loader.add_value("create_time", article_metas[1], re='发布时间：(.*?)')
+        loader.add_value("author", article_metas[0], re='发布者：(.*)')
+        loader.add_value("block_type", block_type)
+        loader.add_value("content", "//div[@class='wp_articlecontent']")
+        loader.add_xpath("img", "//div[@class='wp_articlecontent']//@src")
+        loader.add_value("article_url", response.url)
+        loader.add_value("block_type", block_type)
+        loader.add_value("index", index)
+
+        # yield一个用于下载图片的请求
+        imgs = loader.get_collected_values("img")
 
     def parse_chdnews(self,response):
         '''
@@ -91,20 +111,59 @@ class SchoolnewsSpider(scrapy.Spider):
         解析域名：news.chd.edu.cn       
         示例文章：http://news.chd.edu.cn/2020/0203/c300a120344/page.htm
         '''
-        pass
-        print('=================================')
-        print(sys._getframe().f_code.co_name)
-        print('=================================')
 
-    def parse_jyt_shaanxi(self,response):
+        loader = ItemLoader(item=items.ChdNewsItem(), response=response)
+
+        index = response.meta.get("index")
+        title = response.meta.get('title', None)
+        block_type = response.meta.get('block_type')
+
+        article_metas = response.xpath("//div[@class='article']//p[@class='arti-metas']//span//text()").extract() # 时间和作者
+
+        loader.add_value("title", title)
+        loader.add_value("create_time", article_metas[0])
+        loader.add_value("author", article_metas[1], re='作者：(.*)')
+        loader.add_value("block_type", block_type)
+        loader.add_value("content", "//div[@id='content']")
+        loader.add_xpath("img", "//div[@id='content']//@src")
+        loader.add_value("article_url", response.url)
+        loader.add_value("block_type", block_type)
+        loader.add_value("index", index)
+
+        imgs = loader.get_collected_values("img")
+
+    def parse_jyt_shanxi(self,response):
         '''
         陕西省教育厅
         解析域名：jyt.shaanxi.gov.cn
         示例文章：http://jyt.shaanxi.gov.cn/jynews/gdxx/202002/09/96635.html
         '''
-        print('=================================')
-        print(sys._getframe().f_code.co_name)
-        print('=================================')
+
+        '''
+        需要进行修改部分的标记,测试的时候顺便修改
+        '''
+
+        loader = ItemLoader(item=items.JytShanxiItem(), response=response)
+
+        index = response.meta.get("index")
+        title = response.meta.get('title')
+        block_type = response.meta.get('block_type')
+
+        article_metas = response.xpath("//h1[@class='title']/../../../tr[5]/td/text()").extract()
+
+
+        loader.add_value("create_time", article_metas[0], re='日期：(.*?)')  # 格式:'日期：2020-02-09 17:22:42'
+        loader.add_value("title", title)
+        loader.add_value("author", '陕西省教育厅')
+        loader.add_value("block_type", block_type)
+        loader.add_value("content", "//div[@id='article']")
+        loader.add_xpath("img", "//div[@id='content']//@src")
+        loader.add_value("article_url", response.url)
+        loader.add_value("block_type", block_type)
+        loader.add_value("index", index)
+
+        # yield一个用于下载图片的请求
+        imgs = loader.get_collected_values("img")
 
     def parse_univs(self,response):
         '''
@@ -112,16 +171,66 @@ class SchoolnewsSpider(scrapy.Spider):
         解析域名：univs.cn
         示例文章：http://www.univs.cn/zx/a/xy_gxlb/200219/1535583.shtml
         '''
-        print('=================================')
-        print(sys._getframe().f_code.co_name)
-        print('=================================')
-    
+        loader = ItemLoader(item=items.UnivsItem(), response=response)
+
+        index = response.meta.get("index")
+        title = response.meta.get('title', None)
+        block_type = response.meta.get('block_type')
+
+        # 来源 和 时间
+        article_metas = response.xpath("//div[@class='detail_t clearfix']")
+
+        loader.add_value("title", title)
+        loader.add_value("create_time", "//div[@class='detail_t clearfix']/span[2]//text()") # [2020-02-19]
+        loader.add_value("author", "//div[@class='detail_t clearfix']/span[1]//text()", re="来源：(.*?)")
+        loader.add_value("block_type", block_type)
+        loader.add_value("content", "//div[@class='detail-content']/div[1]")
+        loader.add_xpath("img", "//div[@class='detail-content']/div[1]//@src")
+        loader.add_value("article_url", response.url)
+        loader.add_value("block_type", block_type)
+        loader.add_value("index", index)
+
     def parse_wechat(self,response):
         '''
         微信公众号
         解析域名：mp.weixin.qq.com
         示例文章：https://mp.weixin.qq.com/s/QD239VGRmictZPBp7kyehQ
         '''
-        print('=================================')
-        print(sys._getframe().f_code.co_name)
-        print('=================================')
+        loader = ItemLoader(item=items.WeChatItem(), response=response)
+
+        index = response.meta.get("index")
+        title = response.meta.get('title')
+        block_type = response.meta.get('block_type')
+        create_time = response.meta.get('create_time') # 要在上个页面获取,文章页面没看到时间
+
+        loader.add_value("title", title)
+        loader.add_value("create_time", create_time)
+        loader.add_value("author", "//div[@id='meta_content']/span[1]/text()") # 把左右两边的空格去掉就行
+        loader.add_value("block_type", block_type)
+        loader.add_value("content", "//div[@class='rich_media_content ']")
+        loader.add_xpath("img", "//div[@class='rich_media_content ']//@src")
+        loader.add_value("article_url", response.url)
+        loader.add_value("block_type", block_type)
+        loader.add_value("index", index)
+
+
+    def parse_img(self,responsee):
+        '''
+        下载、保存图片
+        :param responsee:
+        :return:
+        '''
+        pass
+
+    def request_imgs(self, response, imgs):
+        '''
+        构造一个图片请求
+        :param response:
+        :param imgs:
+        :return:
+        '''
+        if imgs:
+            for img in imgs:
+                if "http" in img:
+                    yield Request(img, callback=self.parse_img, dont_filter=True,
+                                  meta={"type": "image", "article_url": response.url})
