@@ -12,9 +12,8 @@ from scrapy.loader.processors import TakeFirst,Join,MapCompose
 
 from scrapy.loader import ItemLoader
 
-# 需要继承内置的ItemLoader类
 class EpidemicNewsItemLoader(ItemLoader):
-    # 自定义itemloader，默认的输出处理器为取第一个非空元素
+
     default_output_processor = TakeFirst()
 
 # 在前面写的几个都是比较常用的函数
@@ -22,23 +21,21 @@ def urljoin_url(url,loader_context):
     ''' 补全单个连接 '''
     return loader_context['response'].urljoin(url)
 
-def dispose_time(time_str):
+def dispose_time(format='%Y-%m-%d'):
     '''
     处理时间,转换成整数时间戳
-    :param time_str:  时间字符串,e.g '发布时间：%Y-%m-%d'
+    :param time_str:  时间字符串
+    :param format: 时间格式 e.g '%Y-%m-%d'
     :return: 时间戳
     '''
-    tupletime = time.strptime(time_str,'发布时间：%Y-%m-%d')
-    return int(time.mktime(tupletime))
+    def func(time_str):
+        tupletime = time.strptime(time_str,format)
+        return int(time.mktime(tupletime))
+    return func
 
 class EpidemicNewsItem(scrapy.Item):
-    # 如果要使用itemLoader，使用上方定义的EpidemicNewsItemLoader，output_processor默认使用TakeFirst()
     # 文章标题
-    title = scrapy.Field()
-    # 原文url
-    url = scrapy.Field() 
-    # 缩略图
-    litimg = scrapy.Field()
+    title = scrapy.Field(output_processor = TakeFirst())
     # 版块/标签
     block_type = scrapy.Field()
     # 作者/来源
@@ -46,13 +43,11 @@ class EpidemicNewsItem(scrapy.Item):
     # 文章内容
     content = scrapy.Field()
     # 创建时间
-    create_time = scrapy.Field()
+    create_time = scrapy.Field(input_processor=MapCompose(str.strip, dispose_time() ) )
     # 文章链接
     article_url = scrapy.Field()
-    # 图片链接(不需要进行保存,只是中间处理会用到)
-    img_url = scrapy.Field()
-    # 权限
-    power = scrapy.Field()
+    # 图片
+    img = scrapy.Field()
 
 class ChdItem(EpidemicNewsItem):
     '''
@@ -65,14 +60,13 @@ class ChdNewsItem(EpidemicNewsItem):
     学校新闻网 items
     '''
     content = scrapy.Field(output_processor=TakeFirst())
-    detail_time = scrapy.Field(input_processor=MapCompose(str.strip, dispose_time), output_processor=TakeFirst())
     img = scrapy.Field(input_processor=MapCompose(urljoin_url))
 
 class JytShanxiItem(EpidemicNewsItem):
     '''
     陕西省教育厅
     '''
-    pass
+    create_time = scrapy.Field(input_processor=MapCompose(str.strip, dispose_time('%Y-%m-%d %H:%M:%S')) )
 
 class UnivsItem(EpidemicNewsItem):
     '''
@@ -84,4 +78,4 @@ class WeChatItem(EpidemicNewsItem):
     '''
     微信公众号文章
     '''
-    pass
+    author = scrapy.Field(input_processor=MapCompose(str.strip))
