@@ -39,7 +39,7 @@ class EpidemicNewsItem(scrapy.Item):
     # 版块/标签
     block_type = scrapy.Field()
     # 作者/来源
-    author = scrapy.Field()
+    author = scrapy.Field(input_processor=MapCompose(str.strip))
     # 文章内容
     content = scrapy.Field()
     # 创建时间
@@ -78,4 +78,53 @@ class WeChatItem(EpidemicNewsItem):
     '''
     微信公众号文章
     '''
-    author = scrapy.Field(input_processor=MapCompose(str.strip))
+    pass
+
+class GovItem(EpidemicNewsItem):
+    '''
+    中国政府网
+    '''
+    pass
+
+class XaGovItem(EpidemicNewsItem):
+    '''
+    西安市人民政府网
+    '''
+    pass
+
+class MoeGovItem(EpidemicNewsItem):
+    '''
+    中华人民共和国教育部
+    '''
+    pass
+
+class QinfengItem(EpidemicNewsItem):
+    '''
+    秦风
+    '''
+    pass
+
+class NhcGovItem(EpidemicNewsItem):
+    '''
+    中国人民共和国国家卫生健康委员会
+    '''
+    pass
+
+class CpcPeopleItem(EpidemicNewsItem):
+    '''
+    中国共产党新闻网
+    '''
+    pass
+
+class CnHubeiItem(EpidemicNewsItem):
+    '''
+    荆楚网(湖北日报网)
+    '''
+    pass
+
+class PiYaoItem(EpidemicNewsItem):
+    '''
+    中国互联网联合辟谣平台
+    '''
+    pass
+
