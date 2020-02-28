@@ -44,13 +44,9 @@ class SpiderTools():
 class SchoolnewsSpider(scrapy.Spider, SpiderTools):
     name = 'schoolNews'
     allowed_domains = ['chd.edu.cn', 'www.univs.cn', 'mp.weixin.qq.com',
-                       'www.gov.cn', 'jyt.shaanxi.gov.cn', 'www.moe.gov.cn', 'www.xa.gov.cn', 'www.qinfeng.gov.cn',
+                       'www.gov.cn', 'jyt.shaanxi.gov.cn', 'www.moe.gov.cn', 'www.xa.gov.cn', 'www.qinfeng.gov.cn','www.nhc.gov.cn',
                        'cpc.people.com.cn']
     # allowed_domains = ['chd.edu.cn', 'www.moe.gov.cn',]
-
-    headers = {
-        'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36'
-    }
 
     def __init__(self, name=None, **kwargs):
         super().__init__(name=name, **kwargs)
@@ -70,7 +66,7 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
             'www.xa.gov.cn': self.parse_xa_gov,
             'www.moe.gov.cn': self.parse_moe_gov,
             'www.qinfeng.gov.cn': self.parse_qinfeng_gov,
-            # 'www.nhc.gov.cn': self.parse_nhc_gov,
+            'www.nhc.gov.cn': self.parse_nhc_gov,
 
             'cpc.people.com.cn': self.parse_cpc_people,
 
@@ -104,6 +100,9 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         demain = self.parse_domain(url)
         parse = self.parser_domain_map.get(demain, None)
         # 返回对应解析器,没有给出一个Error
+        if demain == "www.nhc.gov.cn":
+            print("找到国家卫计委")
+            print("解析器:",parse)
         if parse:
             return parse
         else:
@@ -132,11 +131,10 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
             yield scrapy.Request(url, callback=self.get_parse(url), meta=meta)
 
         # 获取下一页
-        next_page = response.xpath('//li[contains(@class,"page_nav")]//a[contains(@class,"next")]/@href')
+        next_page = response.xpath('//li[@class="page_nav"]//a[@class="next"]/@href')
         next_url = next_page.extract_first()
         next_url = response.urljoin(next_url)
         if 'javascript' not in next_url:
-            print(next_url)
             # 如果还有下一页（末页的href是javascript:void(0);）
             yield scrapy.Request(next_url,callback=self.parse,meta={'block_type':response.meta.get('block_type')},dont_filter=True)
 
@@ -261,7 +259,6 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
 
         yield loader.load_item()
 
-# 下方新增的网站解析函数没有进行测试
     def parse_gov(self, response):
         '''
         中国政府网
@@ -281,6 +278,8 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
 
         imgs = loader.get_collected_values("img")
         yield from self.request_imgs(response, imgs)
+
+        yield loader.load_item()
 
     def parse_xa_gov(self, response):
         '''
@@ -304,6 +303,8 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         imgs = loader.get_collected_values("img")
         yield from self.request_imgs(response, imgs)
 
+        yield loader.load_item()
+
     def parse_moe_gov(self, response):
         '''
         中国人民共和国教育部
@@ -325,6 +326,8 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
 
         imgs = loader.get_collected_values("img")
         yield from self.request_imgs(response, imgs)
+
+        yield loader.load_item()
 
     def parse_qinfeng_gov(self, response):
         '''
@@ -348,28 +351,37 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         imgs = loader.get_collected_values("img")
         yield from self.request_imgs(response, imgs)
 
-# 这个网站要使用cookies,稍微麻烦点,先注释了,最后弄这个
-    # def parse_nhc_gov(self, response):
-    #     '''
-    #     中国人民共和国国家卫生健康委员会
-    #     解析域名：www.nhc.gov.cn
-    #     示例文章：http://www.nhc.gov.cn/xcs/pfzs/202002/6090ed34d8e64d038fbed94b9f957059.shtml
-    #     '''
-    #     loader = ItemLoader(item=items.QinfengItem(), response=response)
-    #     title, block_type, create_time = self.get_meta(response.meta)
-    #
-    #     article_metas = response.xpath("//div[@class='list']").extract()
-    #
-    #     loader.add_value("title", title)
-    #     loader.add_value("block_type", block_type)
-    #     loader.add_value("article_url", response.url)
-    #     loader.add_value("create_time", article_metas[0] + " " + article_metas[1], re='时间：(.*)')  # 时间：2020-02-14 17:02
-    #     loader.add_value("author", article_metas, re='来源：(.*)')  # 来源：秦风网
-    #     loader.add_xpath("content", "//div[@class='v_news_content']")
-    #     loader.add_xpath("img", "//div[@class='v_news_content']//@src")
-    #
-    #     imgs = loader.get_collected_values("img")
-    #     yield from self.request_imgs(response, imgs)
+        yield loader.load_item()
+
+    # 这个网站要使用cookies
+    # 这个网站没有进行访问,此处标记一个bug
+    def parse_nhc_gov(self, response):
+        '''
+        中国人民共和国国家卫生健康委员会
+        解析域名：www.nhc.gov.cn
+        示例文章：http://www.nhc.gov.cn/xcs/pfzs/202002/6090ed34d8e64d038fbed94b9f957059.shtml
+        '''
+        print("进入国家卫健委")
+        loader = ItemLoader(item=items.NhcGovItem(), response=response)
+        title, block_type, create_time = self.get_meta(response.meta)
+
+        article_metas = response.xpath("//div[@class='list']").extract()
+        print("article_meta内容:",article_metas)
+        if not article_metas:
+            print("再次访问")
+            yield scrapy.Request(response.url, callback=self.get_parse(response.url), meta=response.meta, dont_filter=True)
+        else:# 下面还没写
+            pass
+            # loader.add_value("title", title)
+            # loader.add_value("block_type", block_type)
+            # loader.add_value("article_url", response.url)
+            # loader.add_value("create_time", article_metas[0] + " " + article_metas[1], re='时间：(.*)')  # 时间：2020-02-14 17:02
+            # loader.add_value("author", article_metas, re='来源：(.*)')  # 来源：秦风网
+            # loader.add_xpath("content", "//div[@class='v_news_content']")
+            # loader.add_xpath("img", "//div[@class='v_news_content']//@src")
+            #
+            # imgs = loader.get_collected_values("img")
+            # yield from self.request_imgs(response, imgs)
 
     def parse_cpc_people(self, response):
         '''
@@ -385,13 +397,15 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         loader.add_value("title", title)
         loader.add_value("block_type", block_type)
         loader.add_value("article_url", response.url)
-        loader.add_value("create_time", article_metas[0], re='\d{4}.*\d{2}')  # '2020年02月25日09:12'
+        loader.add_value("create_time", article_metas[0], re=r'\d{4}.*\d{2}')  # '2020年02月25日09:12'
         loader.add_value("author",article_metas[1]) # '人民网-中国共产党新闻网'
         loader.add_xpath("content", "//div[@class='show_text']")
         loader.add_xpath("img", "//div[@class='show_text']//@src")
 
         imgs = loader.get_collected_values("img")
         yield from self.request_imgs(response, imgs)
+
+        yield loader.load_item()
 
     def parse_cnhubei(self, response):
         '''
@@ -416,6 +430,8 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         imgs = loader.get_collected_values("img")
         yield from self.request_imgs(response, imgs)
 
+        yield loader.load_item()
+
     def parse_piyao(self, response):
         '''
         中国互联网联合辟谣平台
@@ -437,6 +453,8 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
 
         imgs = loader.get_collected_values("img")
         yield from self.request_imgs(response, imgs)
+
+        yield loader.load_item()
 
     def parse_img(self,responsee):
         '''

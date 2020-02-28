@@ -239,3 +239,4 @@ venv.bak/
 out
 gen
 .idea/
+epidemic_news/log.txt

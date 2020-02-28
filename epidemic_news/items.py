@@ -90,7 +90,7 @@ class XaGovItem(EpidemicNewsItem):
     '''
     西安市人民政府网
     '''
-    pass
+    create_time = scrapy.Field(input_processor=MapCompose(str.strip, dispose_time('%Y-%m-%d %H:%M')))
 
 class MoeGovItem(EpidemicNewsItem):
     '''
@@ -102,25 +102,24 @@ class QinfengItem(EpidemicNewsItem):
     '''
     秦风
     '''
-    pass
+    create_time = scrapy.Field(input_processor=MapCompose(str.strip, dispose_time('%Y-%m-%d %H:%M')))
 
 class NhcGovItem(EpidemicNewsItem):
     '''
     中国人民共和国国家卫生健康委员会
     '''
     pass
-
 class CpcPeopleItem(EpidemicNewsItem):
     '''
     中国共产党新闻网
     '''
-    pass
+    create_time = scrapy.Field(input_processor=MapCompose(str.strip, dispose_time('%Y年%m月%d日%H:%M')))
 
 class CnHubeiItem(EpidemicNewsItem):
     '''
     荆楚网(湖北日报网)
     '''
-    pass
+    create_time = scrapy.Field(input_processor=MapCompose(str.strip, dispose_time('%Y年%m月%d日%H:%M')))
 
 class PiYaoItem(EpidemicNewsItem):
     '''
