@@ -109,6 +109,7 @@ class NhcGovItem(EpidemicNewsItem):
     中国人民共和国国家卫生健康委员会
     '''
     pass
+
 class CpcPeopleItem(EpidemicNewsItem):
     '''
     中国共产党新闻网
@@ -126,4 +127,11 @@ class PiYaoItem(EpidemicNewsItem):
     中国互联网联合辟谣平台
     '''
     pass
+
+class ImageItem(scrapy.Item):
+    '''
+    图片Item
+    '''
+    pass
+
 

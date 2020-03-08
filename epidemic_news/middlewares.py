@@ -6,7 +6,28 @@
 # https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 
 from scrapy import signals
+from scrapy.exceptions import IgnoreRequest
 
+class FilterUrlDownloaderMiddleware(object):
+    '''
+    使用redis对已保存的文章进行去重(url)
+    '''
+    @classmethod
+    def from_crawler(cls, crawler):
+        # This method is used by Scrapy to create your spiders.
+        s = cls()
+        crawler.signals.connect(s.spider_opened, signal=signals.spider_opened)
+        return s
+
+    def spider_opened(self, spider):
+        self.filter_url = '''xxxx''' # 实例化redis连接
+
+    def process_request(self,request,spider):
+        exist = self.filter_url.filter(request.url)
+        if exist:
+            raise IgnoreRequest("ignore request: %s" % request.url)
+        else:
+            return None
 
 class EpidemicNewsSpiderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,

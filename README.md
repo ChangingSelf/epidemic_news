@@ -55,6 +55,45 @@ $scrapy crawl schoolNews -o test.json
 - **很奇怪:有时候会出现对应的文章,有时候没有.**
 
 
+## 流程
+
+### Spider爬取部分
+1. 分别爬取六个一级子版块网站
+
+2. 提取对应的文章标题,日期,以及链接
+
+3. 通过redis判断链接是否已经爬取, 是则停止提取, 并重复1~3步, 否则第4步
+
+4. 将文章链接构造为Request, 并通过域名判断使用不同的文章解析函数进行解析提取(图片类似)
+
+### 字段部分
+1. 使用Itemloader进行处理
+
+### 管道部分
+1. pass
+
+### 数据库部分(涉及三个数据表)
+- **fa_cms_archives**: 主要用到的表, 版块id,标题,时间等等字段
+- **fa_cms_addonnews**: 写入内容的表,id与`fa_cms_archives`对应
+- **fa_cms_tags**: 写入标签的表
+
+1. 判断`archives`中是否有重复数据(根据标题,标签,时间判断), 如果重复, 判断power是否一致, 一致则写入一个Error级别日志, 
+不一致则按照更低级别(如all)进行更新
+
+2. 没有重复数据,则将数据写入到`archives`表中
+
+3. 获取此数据在`archives`表中的id
+
+4. 将对应数据插入`addonnews`表中
+
+5. 判断`tags`表中是否存在此标签, 不存在则创建, 存在则更新
+
+
+
+
+
+
+
 
 ## 结构设计
 
@@ -65,4 +104,5 @@ $scrapy crawl schoolNews -o test.json
 - `SchoolnewsSpider.parser()`解析一级子网站（目录）下的所有文章url，并根据域名生成不同的Request，获取完本页会继续获取下一页
   - 域名映射字典`self.parser_domain_map`里面存放着每个域名对应的解析回调函数，在生成Request时传入
   - 默认解析函数`self.default_parser`是在域名映射字典未找到对应的域名时，使用的解析函数，可以用于测试单个文章解析函数
-- 
+
+- 去重

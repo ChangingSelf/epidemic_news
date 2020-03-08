@@ -97,3 +97,7 @@ REACTOR_THREADPOOL_MAXSIZE = 100
 # 配置日志
 # LOG_LEVEL = 'WARNING'
 # LOG_FILE = 'log.txt'
+
+# 数据库相关配置
+DB_CONFIG_PATH = '',
+DB_CONFIG_MYSQL_NAME = 'mysql_235'
