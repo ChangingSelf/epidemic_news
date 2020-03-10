@@ -7,7 +7,7 @@ import pymysql
 import logging
 from configparser import ConfigParser
 
-from epidemic_news.settings import DB_CONFIG_PATH,DB_CONFIG_MYSQL_NAME
+from epidemic_news.settings import DB_CONFIG_PATH,MYSQL_CONFIG_SECTION
 
 def mysql_conf(section):
     config = ConfigParser()
@@ -24,7 +24,7 @@ def mysql_conf(section):
 
 class Model():
     def __init__(self, *args, **kwargs):
-        host, port, username, password, db = mysql_conf(DB_CONFIG_MYSQL_NAME)
+        host, port, username, password, db = mysql_conf(MYSQL_CONFIG_SECTION)
         self.con = pymysql.connect(
             host=host,
             port=port,
