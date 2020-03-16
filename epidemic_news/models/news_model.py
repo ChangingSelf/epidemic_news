@@ -8,23 +8,11 @@ import logging
 from configparser import ConfigParser
 
 from epidemic_news.settings import DB_CONFIG_PATH,MYSQL_CONFIG_SECTION
-
-def mysql_conf(section):
-    config = ConfigParser()
-    config.read(DB_CONFIG_PATH)
-    if config.has_section(section):
-        host = config.get(section, "host")
-        port = config.getint(section, "port")
-        username = config.get(section,"username")
-        password = config.get(section, "password")
-        db = config.get(section, "db")
-        return host, port, username,password, db
-    else:
-        raise Exception("读取mysql配置出现错误")
+from utils.config import config
 
 class Model():
     def __init__(self, *args, **kwargs):
-        host, port, username, password, db = mysql_conf(MYSQL_CONFIG_SECTION)
+        host, port, username, password, db = config.read_mysql_conf(MYSQL_CONFIG_SECTION)
         self.con = pymysql.connect(
             host=host,
             port=port,
@@ -127,7 +115,10 @@ class TagsModel(Model):
 class SpiderModel(ArchivesModel, AddonnewsModel, TagsModel):
 
     def write_archives(self,article_url,channel_id,model_id,title,flag,image,keywords,description,tags,weigh,views,comments,likes,dislikes,diyname,createtime,publishtime,status,power,*args,**kwargs):
-        '''' fa_cms_archives表 '''
+        ''''
+        fa_cms_archives表
+        :return: 数据写入成功(包括数据已存在)返回archives中对应的id, 失败返回None
+        '''
         result = self.inquire_archives(channel_id, title, tags, createtime)
         if result:
             id, old_power = result
@@ -148,8 +139,11 @@ class SpiderModel(ArchivesModel, AddonnewsModel, TagsModel):
 
         return id
 
-    def write_addonnews(self,article_url,id,content,author,style,*args,**kwargs):
-        ''' addonnews表 '''
+    def write_addonnews(self,id,article_url,content,author,style,*args,**kwargs):
+        '''
+        addonnews表
+        :return: 写入成功返回id, 失败(包括数据已存在)为None
+        '''
         result = self.inquire_addonnews(id)
         if result:
             self.logger.error(f"addonnews表数据已存在, id:{id}, article_url:{article_url}")

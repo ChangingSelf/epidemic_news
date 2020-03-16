@@ -8,6 +8,10 @@
 from scrapy import signals
 from scrapy.exceptions import IgnoreRequest
 
+from models.news_redis import NewsSet
+from utils.config import config
+from settings import REDIS_CONFIG_KEY
+
 class FilterUrlDownloaderMiddleware(object):
     '''
     使用redis对已保存的文章进行去重(url)
@@ -20,14 +24,21 @@ class FilterUrlDownloaderMiddleware(object):
         return s
 
     def spider_opened(self, spider):
-        self.filter_url = '''xxxx''' # 实例化redis连接
+        self.key = self._redis_key(spider.name)
+        self.set = NewsSet(self.key) # 实例化redis连接
 
     def process_request(self,request,spider):
-        exist = self.filter_url.filter(request.url)
+        exist = self.set.sismember(request.url)
         if exist:
             raise IgnoreRequest("ignore request: %s" % request.url)
         else:
             return None
+
+    def _redis_key(self, name):
+        '''
+        返回Redis中 存储文章链接的集合 的 键key
+        '''
+        return config.read_redis_key(REDIS_CONFIG_KEY, name)
 
 class EpidemicNewsSpiderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,

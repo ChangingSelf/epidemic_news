@@ -102,3 +102,8 @@ REACTOR_THREADPOOL_MAXSIZE = 100
 DB_CONFIG_PATH = '',
 MYSQL_CONFIG_SECTION = 'mysql_235'
 REDIS_CONFIG_SECTION = 'redis_local'
+REDIS_CONFIG_KEY = 'redis_key'
+# archives表中 爬取大栏目(spider)对应的 channel_id
+CHANNEL_ID = {
+    "schoolNews": 56,
+}
