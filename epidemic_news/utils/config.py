@@ -24,6 +24,7 @@ class ReadConfig(Single):
             raise TypeError("配置路径参数缺失")
 
     def read_mysql_conf(self, section):
+        ''' 读取mysql配置文件 '''
         if self.config.has_section(section):
             host = self.config.get(section, "host")
             port = self.config.getint(section, "port")
@@ -35,12 +36,22 @@ class ReadConfig(Single):
             raise Exception("读取mysql配置出现错误")
 
     def read_redis_key(self, section, spider_name):
-        config = ConfigParser()
-        config.read(DB_CONFIG_PATH)
-        if config.has_section(section):
-            key = config.get(section, spider_name)
+        ''' 读取redis存储链接的 键 '''
+        if self.config.has_section(section):
+            key = self.config.get(section, spider_name)
             return key
         else:
             raise Exception("redis键 配置出现错误")
+
+    def read_qiniu_conf(self,section):
+        ''' 读取七牛云相关配置 '''
+        if self.config.has_section(section):
+            access_key = self.config.get(section, "access_key")
+            secret_key = self.config.get(section, "secret_key")
+            bucket_name = self.config.get(section, "bucket_name")
+            url = self.config.get(section, "url")
+            return access_key,secret_key,bucket_name,url
+        else:
+            raise Exception("读取mysql配置出现错误")
 
 config = ReadConfig(config_path=DB_CONFIG_PATH)

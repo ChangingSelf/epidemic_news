@@ -33,6 +33,16 @@ def dispose_time(format='%Y-%m-%d'):
         return int(time.mktime(tupletime))
     return func
 
+
+class ImageItem(scrapy.Item):
+    '''
+    图片Item
+    '''
+    content = scrapy.Field()
+    article_url = scrapy.Field()
+    image_url = scrapy.Field()
+
+
 class EpidemicNewsItem(scrapy.Item):
     # 文章标题
     title = scrapy.Field(output_processor = TakeFirst())
@@ -128,10 +138,5 @@ class PiYaoItem(EpidemicNewsItem):
     '''
     pass
 
-class ImageItem(scrapy.Item):
-    '''
-    图片Item
-    '''
-    pass
 
 

@@ -456,13 +456,23 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
 
         yield loader.load_item()
 
-    def parse_img(self,responsee):
+    def parse_img(self,response):
         '''
         下载、保存图片
         :param responsee:
         :return:
         '''
-        pass
+        image_item = items.ImageItem()
+
+        image_item["content"] = response.body
+        image_item["article_url"] = response.meta.get("article_url")
+        image_item["image_url"] = response.url
+
+        # 下载图片失败, 可以重试一次
+        if not response.body:
+            yield Request(response.url, callback=self.parse_img,
+                          meta={"type": "image", "article_url": image_item["article_url"]})
+        yield image_item
 
     def request_imgs(self, response, imgs):
         '''

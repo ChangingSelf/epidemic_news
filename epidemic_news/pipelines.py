@@ -6,15 +6,89 @@
 # See: https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 import logging
 import time
-from configparser import ConfigParser
+import os.path
 
 from scrapy.exceptions import DropItem
 
-from settings import REDIS_CONFIG_KEY, CHANNEL_ID
+from settings import REDIS_CONFIG_KEY, CHANNEL_ID, QINIU_CONFIG_SECTION
+from spiders.schoolNews import SchoolnewsSpider
+from items import ImageItem
 from utils.config import config
 from models.news_model import SpiderModel
 from models.news_redis import NewsSet
-from epidemic_news.spiders.schoolNews import SchoolnewsSpider
+from utils.qiniu_cloud import UploadImage
+from utils.config import config
+
+logger = logging.getLogger()
+
+
+class ImagePipeline(object):
+    '''
+    对content和img字段中的图片链接进行处理
+    对图片内容进行处理
+    '''
+    def open_spider(self,spider):
+        self.upload = UploadImage()
+        # 获取七牛云的链接
+        *_, self.qiniu_url = config.read_qiniu_conf(QINIU_CONFIG_SECTION)
+
+    def process_item(self, item, spider):
+        if isinstance(item, ImageItem):
+            # 上传图像
+            content = item.get("content")
+            article_url = item.get("article_url")
+            image_url = item.get("image_url")
+            filename = self.image_name(image_url)
+            if content:
+                self.upload.uplode(image_content=content,filename=filename)
+            else:
+                logger.error("没有解析到图片,文章地址：{}，图片地址：{}".format(article_url,image_url))
+
+            raise DropItem
+        else:
+            img_urls = item.get("img")
+            content = item.get("content")
+            # 替换图像链接
+            if img_urls:
+                # 替换后的链接列表
+                replace_urls = [self.image_url(url) for url in img_urls]
+                first_img_url = replace_urls[0]
+                # 替换content中的链接
+                for i in range(len(img_urls)):
+                    content = content.replace(img_urls[i], replace_urls[i])
+            else:
+                first_img_url = ""
+
+            item['content'] = content
+            item['image'] = first_img_url
+
+            return item
+
+    def thumbnail(self, content):
+        ''' 制作缩略图, 暂时没写, 就用的第一张原图 '''
+        pass
+
+    def image_name(self, img_url):
+        '''
+        七牛云中存储的 图像名称
+        :param img_url: 图片链接
+        :return: 图片名称
+        '''
+        name = img_url.split("/")[-1]
+        name_suffix = name.split("=")[-1]
+        if not name_suffix:
+            name_suffix = name.split("=")[-2]
+        name = "weappnews/" + name_suffix
+        return name
+
+    def image_url(self, img_url):
+        '''
+        存储在七牛云中图片的完整链接
+        :param img_url: 图片链接
+        :return: 七牛云中图片完整链接
+        '''
+        return os.path.join(self.qiniu_url, self.image_name(img_url))
+
 
 class PrepareItemsPipeline(object):
     '''
@@ -29,7 +103,7 @@ class PrepareItemsPipeline(object):
             'model_id' : 1,
             # 'title'
             'flag' : '',
-            'image' : item.get('img'),
+            # 'image' : item.get('img'), # img字段是所有图片链接, 经过ImagePipeline处理后才有image字段(第一张图片链接,缩略图)
             'keywords' : '',
             'description' : '',
             'tags' : item.get('block_type'),
@@ -65,19 +139,18 @@ class PrepareItemsPipeline(object):
 
 class WriteNewsPipeline(object):
     def open_spider(self,spider):
-        self.logger = logging.getLogger()
         # 获取 Spider 在redis中存储文章链接的 键
         self.key = self._redis_key(spider.name)
         # 获取 栏目ID
         self.channel_id = self._chnnel_id(spider.name)
         # 数据库实例化
         self.model = SpiderModel()
-        self.set = NewsSet()
+        self.set = NewsSet(self.key)
 
     def process_item(self, item, spider):
         article_url = item.get("article_url")
         if not article_url:
-            self.logger.critical(f"item中不存在文章链接, spdier:{spider.name}")
+            logger.critical(f"item中不存在文章链接, spdier:{spider.name}")
             raise DropItem("文章链接遗漏")
 
         item['channel_id'] = self.channel_id
@@ -87,9 +160,9 @@ class WriteNewsPipeline(object):
             if addonnews_id:
                 self.model.write_tags(addonnews_id, item.get('tags'))
                 self.set.sadd(article_url)
-                self.logger.info(f"数据写入成功, id:{addonnews_id}, article_url:{item.get('article_url')}")
+                logger.info(f"数据写入成功, id:{addonnews_id}, article_url:{item.get('article_url')}")
         else:
-            self.logger.info("数据写入失败")
+            logger.info("数据写入失败")
         return item
 
     def _redis_key(self, name):
