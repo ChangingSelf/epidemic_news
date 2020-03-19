@@ -99,9 +99,9 @@ REACTOR_THREADPOOL_MAXSIZE = 100
 # LOG_FILE = 'log.txt'
 
 # 数据库相关配置
-DB_CONFIG_PATH = '',
-MYSQL_CONFIG_SECTION = 'mysql_235'
-REDIS_CONFIG_SECTION = 'redis_local'
+DB_CONFIG_PATH = '/home/py/spider/epidemic_news/epidemic_news/config.conf',
+MYSQL_CONFIG_SECTION = 'mysql_test'
+REDIS_CONFIG_SECTION = 'redis_test'
 REDIS_CONFIG_KEY = 'redis_key'
 # archives表中 爬取大栏目(spider)对应的 channel_id
 CHANNEL_ID = {
