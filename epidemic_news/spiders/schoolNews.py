@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
+from urllib.parse import urlparse
+import logging
+
 import scrapy
 from scrapy.http import Request
 from scrapy.shell import inspect_response
 from scrapy.exceptions import IgnoreRequest
+from scrapy.http.cookies import CookieJar
 
 '''
 import sys
@@ -16,9 +20,8 @@ import items # vscode
 from epidemic_news import items # shell
 from epidemic_news.items import EpidemicNewsItemLoader as ItemLoader
 
-from urllib.parse import urlparse
-import logging
 
+cookjar = CookieJar()
 
 class SpiderTools():
     ''' 在Spider中常用的函数 '''
@@ -353,8 +356,6 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
 
         yield loader.load_item()
 
-    # 这个网站要使用cookies
-    # 这个网站没有进行访问,此处标记一个bug
     def parse_nhc_gov(self, response):
         '''
         中国人民共和国国家卫生健康委员会
@@ -365,23 +366,25 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         loader = ItemLoader(item=items.NhcGovItem(), response=response)
         title, block_type, create_time = self.get_meta(response.meta)
 
-        article_metas = response.xpath("//div[@class='list']").extract()
+        article_metas = response.xpath("//div[class='list']//div[class='source']/span/text()").extract()
         print("article_meta内容:",article_metas)
         if not article_metas:
             print("再次访问")
-            yield scrapy.Request(response.url, callback=self.get_parse(response.url), meta=response.meta, dont_filter=True)
-        else:# 下面还没写
-            pass
-            # loader.add_value("title", title)
-            # loader.add_value("block_type", block_type)
-            # loader.add_value("article_url", response.url)
-            # loader.add_value("create_time", article_metas[0] + " " + article_metas[1], re='时间：(.*)')  # 时间：2020-02-14 17:02
-            # loader.add_value("author", article_metas, re='来源：(.*)')  # 来源：秦风网
-            # loader.add_xpath("content", "//div[@class='v_news_content']")
-            # loader.add_xpath("img", "//div[@class='v_news_content']//@src")
-            #
-            # imgs = loader.get_collected_values("img")
-            # yield from self.request_imgs(response, imgs)
+            cookjar.extract_cookies(response, response.request) # 提取cookies
+            yield scrapy.Request(response.url, callback=self.get_parse(response.url), meta=response.meta, dont_filter=True, cookies=cookjar)
+        else:
+            loader.add_value("title", title)
+            loader.add_value("block_type", block_type)
+            loader.add_value("article_url", response.url)
+            loader.add_value("create_time", article_metas[0], re='发布时间：([\w\W].*)')  # 发布时间： 2020-02-10
+            loader.add_value("author", article_metas[1], re='来源：([\w\W]*)')  # 来源：
+            loader.add_xpath("content", "//div[@class='con']")
+            loader.add_xpath("img", "//div[@class='con']//@src")
+
+            imgs = loader.get_collected_values("img")
+            yield from self.request_imgs(response, imgs)
+
+            yield loader.load_item()
 
     def parse_cpc_people(self, response):
         '''
@@ -488,5 +491,6 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
                                   meta={"type": "image", "article_url": response.url})
                 else:
                     self.log(f"不是一个正常的图片链接, \n文章链接:{response.url} \n图片链接:{img} ")
+                    raise IgnoreRequest
 
 
