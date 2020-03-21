@@ -7,7 +7,7 @@
 
 import scrapy
 import time
-from scrapy.loader.processors import TakeFirst,Join,MapCompose
+from scrapy.loader.processors import TakeFirst, Join, MapCompose, Identity
 
 
 from scrapy.loader import ItemLoader
@@ -56,8 +56,8 @@ class EpidemicNewsItem(scrapy.Item):
     create_time = scrapy.Field(input_processor=MapCompose(str.strip, dispose_time() ) )
     # 文章链接
     article_url = scrapy.Field()
-    # 图片
-    img = scrapy.Field()
+    # 文章中所有图片链接
+    img = scrapy.Field(output_processor=Identity())
 
 class ChdItem(EpidemicNewsItem):
     '''
@@ -70,7 +70,6 @@ class ChdNewsItem(EpidemicNewsItem):
     学校新闻网 items
     '''
     content = scrapy.Field(output_processor=TakeFirst())
-    img = scrapy.Field(input_processor=MapCompose(urljoin_url))
 
 class JytShanxiItem(EpidemicNewsItem):
     '''

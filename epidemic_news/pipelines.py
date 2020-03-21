@@ -10,14 +10,17 @@ import os.path
 
 from scrapy.exceptions import DropItem
 
-from settings import REDIS_CONFIG_KEY, CHANNEL_ID, QINIU_CONFIG_SECTION
-from spiders.schoolNews import SchoolnewsSpider
-from items import ImageItem
-from utils.config import config
-from models.news_model import SpiderModel
-from models.news_redis import NewsSet
-from utils.qiniu_cloud import UploadImage
-from utils.config import config
+from epidemic_news.settings import REDIS_CONFIG_KEY, CHANNEL_ID, QINIU_CONFIG_SECTION, TEST_MODE
+from epidemic_news.items import ImageItem
+from epidemic_news.utils.config import config
+from epidemic_news.models.news_model import SpiderModel
+from epidemic_news.models.news_redis import NewsSet
+from epidemic_news.utils.config import config
+
+if TEST_MODE: # 测试模式 不进行实际图片上传
+    from epidemic_news.utils.qiniu_cloud import TestUploadImage as UploadImage
+else:
+    from epidemic_news.utils.qiniu_cloud import UploadImage
 
 logger = logging.getLogger()
 
@@ -59,6 +62,7 @@ class ImagePipeline(object):
             else:
                 first_img_url = ""
 
+            item = dict(item)
             item['content'] = content
             item['image'] = first_img_url
 
@@ -96,6 +100,7 @@ class PrepareItemsPipeline(object):
     | likes | dislikes | diyname | createtime | updatetime | publishtime | deletetime | status | power
     '''
     def process_item(self, item, spider):
+        item = dict(item)
         item.update({
             # # archives表
             # id

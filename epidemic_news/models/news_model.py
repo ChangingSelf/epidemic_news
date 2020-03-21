@@ -7,7 +7,7 @@ import pymysql
 import logging
 
 from epidemic_news.settings import MYSQL_CONFIG_SECTION
-from utils.config import config
+from epidemic_news.utils.config import config
 
 class Model():
     def __init__(self, *args, **kwargs):

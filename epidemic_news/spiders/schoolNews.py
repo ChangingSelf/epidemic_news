@@ -11,7 +11,7 @@ from scrapy.http.cookies import CookieJar
 '''
 import sys
 import os
-#删去上方第一个#即注释此代码块
+
 path = os.path.dirname(__file__)
 parent_path = os.path.dirname(path)
 sys.path.append(parent_path)
@@ -82,15 +82,15 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         # 上级精神
         yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6069/list.htm", meta={"block_type":"上级精神"}, dont_filter=True)
         # 工作动态
-        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6070/list.htm", meta={"block_type":"上级精神"}, dont_filter=True)
+        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6070/list.htm", meta={"block_type":"工作动态"}, dont_filter=True)
         # 基层动态
-        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/jcdt/list.htm", meta={"block_type":"上级精神"}, dont_filter=True)
+        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/jcdt/list.htm", meta={"block_type":"基层动态"}, dont_filter=True)
         # 通知公告
-        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6071/list.htm", meta={"block_type":"上级精神"}, dont_filter=True)
+        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6071/list.htm", meta={"block_type":"通知公告"}, dont_filter=True)
         # 防治知识
-        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6072/list.htm", meta={"block_type":"上级精神"}, dont_filter=True)
+        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6072/list.htm", meta={"block_type":"防治知识"}, dont_filter=True)
         # 拒绝谣言
-        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6073/list.htm", meta={"block_type":"上级精神"}, dont_filter=True)
+        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6073/list.htm", meta={"block_type":"拒绝谣言"}, dont_filter=True)
 
     def get_parse(self,url):
         '''
@@ -103,14 +103,9 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         demain = self.parse_domain(url)
         parse = self.parser_domain_map.get(demain, None)
         # 返回对应解析器,没有给出一个Error
-        if demain == "www.nhc.gov.cn":
-            print("找到国家卫计委")
-            print("解析器:",parse)
         if parse:
             return parse
         else:
-            print(demain)
-            print(url)
             self.log(f"Not Parser Error , Url:{url}", level=logging.ERROR)
             raise IgnoreRequest("没有对应的解析函数")
 
@@ -275,8 +270,14 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         loader.add_value("create_time", create_time)  # 2020-02-19
         loader.add_value("author", "中国政府网")
         loader.add_value("block_type", block_type)
-        loader.add_xpath("content", "//div[@class='container']")
-        loader.add_xpath("img", "//div[@class='container']//@src")
+        if "www.gov.cn/xinwen" in response.url:
+            content_xpath = "//div[@class='pages_content']"
+            img_xpath = "//div[@class='pages_content']//@src"
+        else:
+            content_xpath = "//div[@class='container']"
+            img_xpath = "//div[@class='container']//@src"
+        loader.add_xpath("content", content_xpath)
+        loader.add_xpath("img", img_xpath)
         loader.add_value("article_url", response.url)
 
         imgs = loader.get_collected_values("img")
@@ -362,14 +363,11 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         解析域名：www.nhc.gov.cn
         示例文章：http://www.nhc.gov.cn/xcs/pfzs/202002/6090ed34d8e64d038fbed94b9f957059.shtml
         '''
-        print("进入国家卫健委")
         loader = ItemLoader(item=items.NhcGovItem(), response=response)
         title, block_type, create_time = self.get_meta(response.meta)
 
         article_metas = response.xpath("//div[class='list']//div[class='source']/span/text()").extract()
-        print("article_meta内容:",article_metas)
         if not article_metas:
-            print("再次访问")
             cookjar.extract_cookies(response, response.request) # 提取cookies
             yield scrapy.Request(response.url, callback=self.get_parse(response.url), meta=response.meta, dont_filter=True, cookies=cookjar)
         else:
@@ -486,11 +484,9 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         '''
         if imgs:
             for img in imgs:
-                if "http" in img:
-                    yield Request(img, callback=self.parse_img, dont_filter=True,
-                                  meta={"type": "image", "article_url": response.url})
-                else:
-                    self.log(f"不是一个正常的图片链接, \n文章链接:{response.url} \n图片链接:{img} ")
-                    raise IgnoreRequest
+                if "http" not in img:
+                    img = response.urljoin(img)
+                yield Request(img, callback=self.parse_img, dont_filter=True,
+                              meta={"type": "image", "article_url": response.url})
 
 

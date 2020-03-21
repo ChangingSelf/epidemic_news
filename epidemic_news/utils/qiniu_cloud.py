@@ -2,8 +2,8 @@ from configparser import ConfigParser
 import os.path
 from qiniu import Auth,put_file,etag,BucketManager,put_stream,config,put_data
 
-from settings import QINIU_CONFIG_SECTION
-from utils.config import config
+from epidemic_news.settings import QINIU_CONFIG_SECTION
+from epidemic_news.utils.config import config
 
 class UploadImage():
     '''
@@ -18,6 +18,12 @@ class UploadImage():
         token = self.q.upload_token(self.bucket_name, filename, 3600)
         ret, info = put_data(token, filename, image_content)
         img_url = os.path.join(self.url,filename)
+        return img_url
+
+class TestUploadImage(UploadImage):
+    ''' 提供与UploadImage相同的接口, 但是实际并不工作 '''
+    def upload(self, image_content, filename):
+        img_url = os.path.join(self.url, filename)
         return img_url
 
 if __name__ == '__main__':

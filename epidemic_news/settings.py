@@ -48,13 +48,14 @@ DEFAULT_REQUEST_HEADERS = {
 # Enable or disable spider middlewares
 # See https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 SPIDER_MIDDLEWARES = {
-   'epidemic_news.middlewares.EpidemicNewsSpiderMiddleware': 543,
+    'epidemic_news.middlewares.EpidemicNewsSpiderMiddleware': 543,
 }
 
 # Enable or disable downloader middlewares
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
-   'epidemic_news.middlewares.EpidemicNewsDownloaderMiddleware': 543,
+    'epidemic_news.middlewares.FilterUrlDownloaderMiddleware': 543,
+    'epidemic_news.middlewares.EpidemicNewsDownloaderMiddleware': 543,
 }
 
 # Enable or disable extensions
@@ -66,7 +67,9 @@ DOWNLOADER_MIDDLEWARES = {
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-   'epidemic_news.pipelines.EpidemicNewsPipeline': 300,
+    'epidemic_news.pipelines.ImagePipeline': 100,
+    'epidemic_news.pipelines.PrepareItemsPipeline': 200,
+    'epidemic_news.pipelines.WriteNewsPipeline': 300,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -90,18 +93,28 @@ ITEM_PIPELINES = {
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
+# 使用test配置进行运行
+TEST_MODE = True
 
 # 配置最大线程数量：
 REACTOR_THREADPOOL_MAXSIZE = 100
 
 # 配置日志
-# LOG_LEVEL = 'WARNING'
-# LOG_FILE = 'log.txt'
+if TEST_MODE:
+    LOG_LEVEL = 'ERROR'
+else:
+    LOG_LEVEL = 'ERROR'
+LOG_FILE = 'log.txt'
 
 # 数据库相关配置
 DB_CONFIG_PATH = '/home/py/spider/epidemic_news/epidemic_news/config.conf',
-MYSQL_CONFIG_SECTION = 'mysql_test'
-REDIS_CONFIG_SECTION = 'redis_test'
+if TEST_MODE:
+    MYSQL_CONFIG_SECTION = 'mysql_test'
+    REDIS_CONFIG_SECTION = 'redis_test'
+else:
+    MYSQL_CONFIG_SECTION = 'mysql_235'
+    REDIS_CONFIG_SECTION = 'redis_local'
+
 QINIU_CONFIG_SECTION = 'qiniu_teacher'
 REDIS_CONFIG_KEY = 'redis_key'
 # archives表中 爬取大栏目(spider)对应的 channel_id

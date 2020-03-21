@@ -8,9 +8,9 @@
 from scrapy import signals
 from scrapy.exceptions import IgnoreRequest
 
-from models.news_redis import NewsSet
-from utils.config import config
-from settings import REDIS_CONFIG_KEY
+from epidemic_news.models.news_redis import NewsSet
+from epidemic_news.utils.config import config
+from epidemic_news.settings import REDIS_CONFIG_KEY
 
 class FilterUrlDownloaderMiddleware(object):
     '''
@@ -39,6 +39,7 @@ class FilterUrlDownloaderMiddleware(object):
         返回Redis中 存储文章链接的集合 的 键key
         '''
         return config.read_redis_key(REDIS_CONFIG_KEY, name)
+
 
 class EpidemicNewsSpiderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,

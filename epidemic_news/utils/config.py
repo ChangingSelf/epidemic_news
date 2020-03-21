@@ -1,6 +1,6 @@
 from configparser import ConfigParser
 
-from settings import DB_CONFIG_PATH
+from epidemic_news.settings import DB_CONFIG_PATH
 
 class Single():
     ''' 单例模式 '''
@@ -35,6 +35,16 @@ class ReadConfig(Single):
         else:
             raise Exception("读取mysql配置出现错误")
 
+    def read_redis_conf(self, section):
+        if self.config.has_section(section):
+            host = self.config.get(section, "host")
+            port = self.config.get(section, "port")
+            password = self.config.get(section, "password")
+            db = self.config.get(section, "db")
+            return host, port, password, db
+        else:
+            raise Exception("读取redis配置出现错误")
+
     def read_redis_key(self, section, spider_name):
         ''' 读取redis存储链接的 键 '''
         if self.config.has_section(section):
@@ -55,3 +65,7 @@ class ReadConfig(Single):
             raise Exception("读取mysql配置出现错误")
 
 config = ReadConfig(config_path=DB_CONFIG_PATH)
+
+if __name__ == '__main__':
+    from epidemic_news.settings import REDIS_CONFIG_SECTION
+    config.read_redis_conf(REDIS_CONFIG_SECTION)
