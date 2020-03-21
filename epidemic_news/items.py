@@ -131,11 +131,29 @@ class CnHubeiItem(EpidemicNewsItem):
     '''
     create_time = scrapy.Field(input_processor=MapCompose(str.strip, dispose_time('%Y年%m月%d日%H:%M')))
 
+class PyCnHubeiItem(EpidemicNewsItem):
+    '''
+    荆楚网(湖北日报网)
+    '''
+    create_time = scrapy.Field(input_processor=MapCompose(str.strip, dispose_time('%Y-%m-%d %H:%M')))
+
+
 class PiYaoItem(EpidemicNewsItem):
     '''
     中国互联网联合辟谣平台
     '''
     pass
 
+class XinhuaItem(EpidemicNewsItem):
+    '''
+    新华网(习近平专题报道)
+    '''
+    create_time = scrapy.Field(input_processor=MapCompose(str.strip, dispose_time('%Y-%m-%d %H:%M:%S')))
+
+class ChinaCdcItem(EpidemicNewsItem):
+    '''
+    中国疾病预防控制中心
+    '''
+    pass
 
 

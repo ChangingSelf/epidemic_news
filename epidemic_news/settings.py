@@ -101,10 +101,10 @@ REACTOR_THREADPOOL_MAXSIZE = 100
 
 # 配置日志
 if TEST_MODE:
-    LOG_LEVEL = 'ERROR'
+    LOG_LEVEL = 'INFO'
 else:
     LOG_LEVEL = 'ERROR'
-LOG_FILE = 'log.txt'
+    LOG_FILE = 'log.txt'
 
 # 数据库相关配置
 DB_CONFIG_PATH = '/home/py/spider/epidemic_news/epidemic_news/config.conf',

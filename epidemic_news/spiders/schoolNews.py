@@ -8,15 +8,6 @@ from scrapy.shell import inspect_response
 from scrapy.exceptions import IgnoreRequest
 from scrapy.http.cookies import CookieJar
 
-'''
-import sys
-import os
-
-path = os.path.dirname(__file__)
-parent_path = os.path.dirname(path)
-sys.path.append(parent_path)
-import items # vscode
-'''
 from epidemic_news import items # shell
 from epidemic_news.items import EpidemicNewsItemLoader as ItemLoader
 
@@ -74,8 +65,13 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
             'cpc.people.com.cn': self.parse_cpc_people,
 
             'news.cnhubei.com': self.parse_cnhubei,
+            'py.cnhubei.com' : self.parse_py_cnhubei,
 
             'www.piyao.org.cn': self.parse_piyao,
+
+            'www.xinhuanet.com': self.parse_xinhua,
+
+            'www.chinacdc.cn': self.parse_china_cdc,
         }#域名和解析函数的映射字典
 
     def start_requests(self):
@@ -152,7 +148,7 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         loader.add_value("author", article_metas[0], re='发布者：(.*)')
         loader.add_value("block_type", block_type)
         loader.add_xpath("content", "//div[@class='wp_articlecontent']")
-        loader.add_xpath("img", "//div[@class='wp_articlecontent']//@src")
+        loader.add_xpath("img", "//div[@class='wp_articlecontent']//img/@src")
         loader.add_value("article_url", response.url)
 
         # yield一个用于下载图片的请求
@@ -178,7 +174,7 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         loader.add_value("author", article_metas[1], re='作者：(.*)')
         loader.add_value("block_type", block_type)
         loader.add_xpath("content", "//div[@id='content']")
-        loader.add_xpath("img", "//div[@id='content']//@src")
+        loader.add_xpath("img", "//div[@id='content']//img/@src")
         loader.add_value("article_url", response.url)
 
         imgs = loader.get_collected_values("img")
@@ -202,7 +198,7 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         loader.add_value("author", '陕西省教育厅')
         loader.add_value("block_type", block_type)
         loader.add_xpath("content", "//div[@id='article']")
-        loader.add_xpath("img", "//div[@id='content']//@src")
+        loader.add_xpath("img", "//div[@id='content']//img/@src")
         loader.add_value("article_url", response.url)
 
         imgs = loader.get_collected_values("img")
@@ -227,7 +223,7 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         loader.add_xpath("author", "//div[@class='detail_t clearfix']/span[1]//text()", re="来源：(.*)")
         loader.add_value("block_type", block_type)
         loader.add_xpath("content", "//div[@class='detail-content']/div[1]")
-        loader.add_xpath("img", "//div[@class='detail-content']/div[1]//@src")
+        loader.add_xpath("img", "//div[@class='detail-content']/div[1]//img/@src")
         loader.add_value("article_url", response.url)
 
         imgs = loader.get_collected_values("img")
@@ -249,7 +245,7 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         loader.add_xpath("author", "//div[@id='meta_content']/span[1]/text()") # 把左右两边的空白符去掉就行
         loader.add_value("block_type", block_type)
         loader.add_xpath("content", "//div[@class='rich_media_content ']")
-        loader.add_xpath("img", "//div[@class='rich_media_content ']//@src")
+        loader.add_xpath("img", "//div[@class='rich_media_content ']//img/@src")
         loader.add_value("article_url", response.url)
 
         imgs = loader.get_collected_values("img")
@@ -272,10 +268,10 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         loader.add_value("block_type", block_type)
         if "www.gov.cn/xinwen" in response.url:
             content_xpath = "//div[@class='pages_content']"
-            img_xpath = "//div[@class='pages_content']//@src"
+            img_xpath = "//div[@class='pages_content']//img/@src"
         else:
             content_xpath = "//div[@class='container']"
-            img_xpath = "//div[@class='container']//@src"
+            img_xpath = "//div[@class='container']//img/@src"
         loader.add_xpath("content", content_xpath)
         loader.add_xpath("img", img_xpath)
         loader.add_value("article_url", response.url)
@@ -302,7 +298,7 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         loader.add_value("create_time", article_metas[1], re='发布时间：(.*)')  # '发布时间：2020-02-07 14:44'
         loader.add_value("author",article_metas[0], re='来源：(.*)') # '来源：西安发布'
         loader.add_xpath("content", "//div[@class='m-txt-article']")
-        loader.add_xpath("img", "//div[@class='m-txt-article']//@src")
+        loader.add_xpath("img", "//div[@class='m-txt-article']//img/@src")
 
         imgs = loader.get_collected_values("img")
         yield from self.request_imgs(response, imgs)
@@ -326,7 +322,7 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         loader.add_value("create_time", article_metas, re='\d{4}-\d{2}-\d{2}')  # '2020-02-21'
         loader.add_value("author", article_metas, re='来源：(.*)')  # '来源：新华网'  需要去空格
         loader.add_xpath("content", "//div[@class='TRS_Editor']")
-        loader.add_xpath("img", "//div[@class='TRS_Editor']//@src")
+        loader.add_xpath("img", "//div[@class='TRS_Editor']//img/@src")
 
         imgs = loader.get_collected_values("img")
         yield from self.request_imgs(response, imgs)
@@ -350,7 +346,7 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         loader.add_value("create_time", article_metas[0]+" "+article_metas[1], re='时间：(.*)')  # 时间：2020-02-14 17:02
         loader.add_value("author", article_metas, re='来源：(.*)')  # 来源：秦风网
         loader.add_xpath("content", "//div[@class='v_news_content']")
-        loader.add_xpath("img", "//div[@class='v_news_content']//@src")
+        loader.add_xpath("img", "//div[@class='v_news_content']//img/@src")
 
         imgs = loader.get_collected_values("img")
         yield from self.request_imgs(response, imgs)
@@ -377,7 +373,7 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
             loader.add_value("create_time", article_metas[0], re='发布时间：([\w\W].*)')  # 发布时间： 2020-02-10
             loader.add_value("author", article_metas[1], re='来源：([\w\W]*)')  # 来源：
             loader.add_xpath("content", "//div[@class='con']")
-            loader.add_xpath("img", "//div[@class='con']//@src")
+            loader.add_xpath("img", "//div[@class='con']//img/@src")
 
             imgs = loader.get_collected_values("img")
             yield from self.request_imgs(response, imgs)
@@ -401,7 +397,7 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         loader.add_value("create_time", article_metas[0], re=r'\d{4}.*\d{2}')  # '2020年02月25日09:12'
         loader.add_value("author",article_metas[1]) # '人民网-中国共产党新闻网'
         loader.add_xpath("content", "//div[@class='show_text']")
-        loader.add_xpath("img", "//div[@class='show_text']//@src")
+        loader.add_xpath("img", "//div[@class='show_text']//img/@src")
 
         imgs = loader.get_collected_values("img")
         yield from self.request_imgs(response, imgs)
@@ -426,7 +422,31 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         loader.add_value("create_time", article_metas, re='发布时间：(.*\d{2})')  # 2020年02月23日17:13
         loader.add_value("author", article_metas, re='来源：(.*)')  # 来源：中国新闻网
         loader.add_xpath("content", "//div[@class='article_w']")
-        loader.add_xpath("img", "//div[@class='article_w']//@src")
+        loader.add_xpath("img", "//div[@class='article_w']//img/@src")
+
+        imgs = loader.get_collected_values("img")
+        yield from self.request_imgs(response, imgs)
+
+        yield loader.load_item()
+
+    def parse_py_cnhubei(self, response):
+        '''
+        荆楚网(湖北日报网)
+        解析域名：py.cnhubei.com
+        示例文章：http://py.cnhubei.com/py_zhuanjia/2020/0219/3456.shtml
+        '''
+        loader = ItemLoader(item=items.PyCnHubeiItem(), response=response)
+        title, block_type, create_time = self.get_meta(response.meta)
+
+        article_metas = response.xpath("//div[@class='mintitle']/span//text()").extract()
+
+        loader.add_value("title", title)
+        loader.add_value("block_type", block_type)
+        loader.add_value("article_url", response.url)
+        loader.add_value("create_time", article_metas[0], re='发布时间：(.*)')  # 发布时间：2020-02-19 16:54
+        loader.add_value("author", article_metas[2])  # '中国青年报'
+        loader.add_xpath("content", "//div[@class='content_box']")
+        loader.add_xpath("img", "//div[@class='content_box']//img/@src")
 
         imgs = loader.get_collected_values("img")
         yield from self.request_imgs(response, imgs)
@@ -450,7 +470,55 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         loader.add_value("create_time", article_metas[1], re='时间：(.*)')  # 时间：  2020-02-24
         loader.add_value("author", article_metas[0], re='来源：(.*)')  # 来源： 央视新闻客户端
         loader.add_xpath("content", "//div[@class='con_txt']")
-        loader.add_xpath("img", "//div[@class='con_txt']//@src")
+        loader.add_xpath("img", "//div[@class='con_txt']//img/@src")
+
+        imgs = loader.get_collected_values("img")
+        yield from self.request_imgs(response, imgs)
+
+        yield loader.load_item()
+
+    def parse_xinhua(self, response):
+        '''
+        中国互联网联合辟谣平台
+        解析域名：www.xinhuanet.com
+        示例文章：http://www.xinhuanet.com/politics/leaders/2020-02/10/c_1125555826.htm
+        '''
+        loader = ItemLoader(item=items.XinhuaItem(), response=response)
+        title, block_type, create_time = self.get_meta(response.meta)
+
+        article_metas = response.xpath("//div[@class='h-info']/span/span//text()").extract()
+
+        loader.add_value("title", title)
+        loader.add_value("block_type", block_type)
+        loader.add_value("article_url", response.url)
+        loader.add_value("create_time", article_metas[0])  #  2020-02-10 21:03:52
+        loader.add_value("author", article_metas[1] if len(article_metas)>1 else '')  # \r\n新华网 \r\n
+        loader.add_xpath("content", "//div[@class='main-aticle']")
+        loader.add_xpath("img", "//div[@class='main-aticle']//img/@src")
+
+        imgs = loader.get_collected_values("img")
+        yield from self.request_imgs(response, imgs)
+
+        yield loader.load_item()
+
+    def parse_china_cdc(self, response):
+        '''
+        中国疾病预防控制中心
+        解析域名：www.chinacdc.cn
+        示例文章：http://www.chinacdc.cn/jkzt/crb/zl/szkb_11803/jszl_2275/202002/t20200214_212668.html
+        '''
+        loader = ItemLoader(item=items.XinhuaItem(), response=response)
+        title, block_type, create_time = self.get_meta(response.meta)
+
+        article_metas = response.xpath().extract()
+
+        loader.add_value("title", title)
+        loader.add_value("block_type", block_type)
+        loader.add_value("article_url", response.url)
+        loader.add_xpath("create_time", "//span[@class='info-date']/text()")  # 2020-02-14
+        loader.add_value("author", '中国疾病预防控制中心')  # 中国疾病预防控制中心
+        loader.add_xpath("content", "//div[@class='TRS_Editor']")
+        loader.add_xpath("img", "//div[@class='TRS_Editor']//img/@src")
 
         imgs = loader.get_collected_values("img")
         yield from self.request_imgs(response, imgs)

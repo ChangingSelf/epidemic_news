@@ -67,5 +67,6 @@ class ReadConfig(Single):
 config = ReadConfig(config_path=DB_CONFIG_PATH)
 
 if __name__ == '__main__':
-    from epidemic_news.settings import REDIS_CONFIG_SECTION
+    from epidemic_news.settings import REDIS_CONFIG_SECTION, REDIS_CONFIG_KEY
     config.read_redis_conf(REDIS_CONFIG_SECTION)
+    print(config.read_redis_key(REDIS_CONFIG_KEY, 'schoolNews'))
