@@ -7,10 +7,13 @@
 
 import scrapy
 import time
+import logging
 from scrapy.loader.processors import TakeFirst, Join, MapCompose, Identity
 
 
 from scrapy.loader import ItemLoader
+
+logger = logging.getLogger()
 
 class EpidemicNewsItemLoader(ItemLoader):
 
@@ -29,8 +32,12 @@ def dispose_time(format='%Y-%m-%d'):
     :return: 时间戳
     '''
     def func(time_str):
-        tupletime = time.strptime(time_str,format)
-        return int(time.mktime(tupletime))
+        try:
+            tupletime = time.strptime(time_str,format)
+            return int(time.mktime(tupletime))
+        except ValueError:
+            logger.info("时间格式不匹配")
+            return None
     return func
 
 
@@ -58,6 +65,9 @@ class EpidemicNewsItem(scrapy.Item):
     article_url = scrapy.Field()
     # 文章中所有图片链接
     img = scrapy.Field(output_processor=Identity())
+
+    # 用于排序
+    index = scrapy.Field()
 
 class ChdItem(EpidemicNewsItem):
     '''
