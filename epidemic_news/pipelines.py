@@ -210,5 +210,8 @@ class OrderWriteNewsPipeline(WriteNewsPipeline):
         for file in filenames:
             with open(file, "r") as fn:
                 item = json.load(fn)
-                super().process_item(item, spider)
+                try:
+                    super().process_item(item, spider)
+                except BaseException as e:
+                    logger.critical(f"order写入数据库报错{e}, article_url:{item.get('article_url')}")
             os.remove(file)
