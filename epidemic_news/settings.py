@@ -66,8 +66,11 @@ DOWNLOADER_MIDDLEWARES = {
 
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
+
+# 增量爬取
+INCREACE_CRAWL = True
 # 是否要求顺序写入(用于第一次写入)
-ITEM_ORDER = True
+ITEM_ORDER = False
 ITEM_PIPELINES = {
     'epidemic_news.pipelines.ImagePipeline': 100,
     'epidemic_news.pipelines.PrepareItemsPipeline': 200,

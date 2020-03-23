@@ -10,6 +10,9 @@ from scrapy.http.cookies import CookieJar
 
 from epidemic_news import items # shell
 from epidemic_news.items import EpidemicNewsItemLoader as ItemLoader
+from epidemic_news.utils.config import config
+from epidemic_news.settings import REDIS_CONFIG_KEY
+from epidemic_news.models.news_redis import NewsSet
 
 
 cookjar = CookieJar()
@@ -114,19 +117,41 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
             'www.chinanews.com': self.parse_chinanews,
         }#域名和解析函数的映射字典
 
+        # 用于判断 请求是否 已重复
+        key = config.read_redis_key(REDIS_CONFIG_KEY, spider_name=name)
+        self.set = NewsSet(key)
+
     def start_requests(self):
         # 上级精神
-        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6069/list.htm", meta={"block_type":"上级精神"}, dont_filter=True)
+        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6069/list.htm", meta={
+            "block_type": "上级精神",
+            "start_url" : "http://www.chd.edu.cn/yqfk/6069/list.htm"
+        }, dont_filter=True)
         # 工作动态
-        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6070/list.htm", meta={"block_type":"工作动态"}, dont_filter=True)
+        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6070/list.htm", meta={
+            "block_type": "工作动态",
+            "start_url": "http://www.chd.edu.cn/yqfk/6070/list.htm"
+        }, dont_filter=True)
         # 基层动态
-        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/jcdt/list.htm", meta={"block_type":"基层动态"}, dont_filter=True)
+        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/jcdt/list.htm", meta={
+            "block_type": "基层动态",
+            "start_url": "http://www.chd.edu.cn/yqfk/jcdt/list.htm"
+        }, dont_filter=True)
         # 通知公告
-        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6071/list.htm", meta={"block_type":"通知公告"}, dont_filter=True)
+        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6071/list.htm", meta={
+            "block_type": "通知公告",
+            "start_url": "http://www.chd.edu.cn/yqfk/6071/list.htm"
+        }, dont_filter=True)
         # 防治知识
-        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6072/list.htm", meta={"block_type":"防治知识"}, dont_filter=True)
+        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6072/list.htm", meta={
+            "block_type": "防治知识",
+            "start_url": "http://www.chd.edu.cn/yqfk/6072/list.htm"
+        }, dont_filter=True)
         # 拒绝谣言
-        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6073/list.htm", meta={"block_type":"拒绝谣言"}, dont_filter=True)
+        yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6073/list.htm", meta={
+            "block_type": "拒绝谣言",
+            "start_url": "http://www.chd.edu.cn/yqfk/6073/list.htm"
+        }, dont_filter=True)
 
     def get_parse(self,url):
         '''
@@ -149,10 +174,29 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         raise IgnoreRequest("测试")
 
 
+    def next_page(self, response, requests):
+        ''' 爬取下一页, 也用于实现增量爬取 '''
+        allow_requests = [request for request in requests if not self.set.sismember(request.url)]
+        yield from allow_requests
+
+        # 当INCREACE_CRAWL为True 并且 有重复链接时 跳转到首页进行爬取
+        if self.settings.get("INCREACE_CRAWL", True) and len(allow_requests) != len(requests):
+            start_url = response.meta.get("start_url")
+            yield scrapy.Request(start_url, meta=response.meta, dont_filter=True)
+        else:
+            next_page = response.xpath('//li[@class="page_nav"]//a[@class="next"]/@href')
+            next_url = next_page.extract_first()
+            next_url = response.urljoin(next_url)
+            if 'javascript' not in next_url:
+                # 如果还有下一页（末页的href是javascript:void(0);）
+                yield scrapy.Request(next_url,callback=self.parse,meta={'block_type':response},dont_filter=True)
+
+
     def parse(self, response):
         '''
         解析一级子网站，即目录，获取所有url，生成对应的Request
         '''
+        requests = [] # 存储request对象
         # 获取当前页所有的新闻链接
         box = response.xpath("//div[@class='col_news_con']")
         for li in box.xpath(".//ul[@class='news_list list2']//li"):
@@ -163,15 +207,10 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
             self.index += 1 # 排序
             meta = {'title':title,'url':url,'create_time':create_time,'block_type':response.meta.get('block_type'), 'index':self.index}
             url = response.urljoin(url) if "http" not in url else url
-            yield scrapy.Request(url, callback=self.get_parse(url), meta=meta)
+            requests.append(scrapy.Request(url, callback=self.get_parse(url), meta=meta) )
 
-        # 获取下一页
-        next_page = response.xpath('//li[@class="page_nav"]//a[@class="next"]/@href')
-        next_url = next_page.extract_first()
-        next_url = response.urljoin(next_url)
-        if 'javascript' not in next_url:
-            # 如果还有下一页（末页的href是javascript:void(0);）
-            yield scrapy.Request(next_url,callback=self.parse,meta={'block_type':response.meta.get('block_type')},dont_filter=True)
+        yield from self.next_page(response, requests)
+
 
     @parse_article
     def parse_chd(self,response):
