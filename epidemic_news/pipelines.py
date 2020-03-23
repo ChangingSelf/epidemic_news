@@ -12,7 +12,7 @@ import os
 
 from scrapy.exceptions import DropItem
 
-from epidemic_news.settings import REDIS_CONFIG_KEY, CHANNEL_ID, QINIU_CONFIG_SECTION, TEST_MODE
+from epidemic_news.settings import REDIS_CONFIG_KEY, CHANNEL_ID, QINIU_CONFIG_SECTION, TEST_MODE, REDIS_CONFIG_IMAGE_KEY
 from epidemic_news.items import ImageItem
 from epidemic_news.utils.config import config
 from epidemic_news.models.news_model import SpiderModel
@@ -33,6 +33,10 @@ class ImagePipeline:
     对图片内容进行处理
     '''
     def open_spider(self,spider):
+        # redis
+        self.image_key = self.key = config.read_redis_key(REDIS_CONFIG_IMAGE_KEY, spider_name=spider.name)
+        self.image_set = NewsSet(key=self.image_key)
+
         self.upload = UploadImage()
         # 获取七牛云的链接
         *_, self.qiniu_url = config.read_qiniu_conf(QINIU_CONFIG_SECTION)
@@ -46,6 +50,7 @@ class ImagePipeline:
             filename = self.image_name(image_url)
             if content:
                 self.upload.uplode(image_content=content,filename=filename)
+                self.image_set.sadd(image_url) # 将图片链接写入redis中, 防止重复爬取
             else:
                 logger.error("没有解析到图片,文章地址：{}，图片地址：{}".format(article_url,image_url))
 
@@ -147,7 +152,7 @@ class PrepareItemsPipeline:
 class WriteNewsPipeline:
     def open_spider(self,spider):
         # 获取 Spider 在redis中存储文章链接的 键
-        self.key = self._redis_key(spider.name)
+        self.key = config.read_redis_key(REDIS_CONFIG_KEY, spider_name=spider.name)
         # 获取 栏目ID
         self.channel_id = self._chnnel_id(spider.name)
         # 数据库实例化
@@ -174,11 +179,6 @@ class WriteNewsPipeline:
         else:
             logger.info("数据写入失败")
 
-    def _redis_key(self, name):
-        '''
-        返回Redis中 存储文章链接的集合 的 键key
-        '''
-        return config.read_redis_key(REDIS_CONFIG_KEY, name)
 
     def _chnnel_id(self, name):
         ''' 返回对应的channel_id '''

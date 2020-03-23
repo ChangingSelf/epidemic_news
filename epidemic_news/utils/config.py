@@ -62,7 +62,7 @@ class ReadConfig(Single):
             url = self.config.get(section, "url")
             return access_key,secret_key,bucket_name,url
         else:
-            raise Exception("读取mysql配置出现错误")
+            raise Exception("七牛云配置出现错误")
 
 config = ReadConfig(config_path=DB_CONFIG_PATH)
 

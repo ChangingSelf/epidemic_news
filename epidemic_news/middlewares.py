@@ -10,7 +10,7 @@ from scrapy.exceptions import IgnoreRequest
 
 from epidemic_news.models.news_redis import NewsSet
 from epidemic_news.utils.config import config
-from epidemic_news.settings import REDIS_CONFIG_KEY
+from epidemic_news.settings import REDIS_CONFIG_KEY, REDIS_CONFIG_IMAGE_KEY
 
 class FilterUrlDownloaderMiddleware(object):
     '''
@@ -24,11 +24,14 @@ class FilterUrlDownloaderMiddleware(object):
         return s
 
     def spider_opened(self, spider):
-        self.key = self._redis_key(spider.name)
-        self.set = NewsSet(self.key) # 实例化redis连接
+        self.key = config.read_redis_key(REDIS_CONFIG_KEY, spider_name=spider.name)
+        self.image_key = self.key = config.read_redis_key(REDIS_CONFIG_IMAGE_KEY, spider_name=spider.name)
+        self.set = NewsSet(self.key)
+        self.image_set = NewsSet(key=self.image_key)
 
     def process_request(self,request,spider):
-        exist = self.set.sismember(request.url)
+        # 即要防止文章重复, 也要防止图片重复下载
+        exist = self.set.sismember(request.url) or self.image_set.sismember(request.url)
         if exist:
             raise IgnoreRequest("ignore request: %s" % request.url)
         else:

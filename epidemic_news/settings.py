@@ -122,6 +122,7 @@ else:
 
 QINIU_CONFIG_SECTION = 'qiniu_teacher'
 REDIS_CONFIG_KEY = 'redis_key'
+REDIS_CONFIG_IMAGE_KEY = 'redis_image_key'
 # archives表中 爬取大栏目(spider)对应的 channel_id
 CHANNEL_ID = {
     "schoolNews": 56,
