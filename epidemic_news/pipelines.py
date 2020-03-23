@@ -198,22 +198,17 @@ class OrderWriteNewsPipeline(WriteNewsPipeline):
 
     def process_item(self, item, spider):
         index = item.get("index")
-        print(f"正在写入json , index为{index}")
         filename = f"{self.tmp}{index:0>5d}-{spider.name}.json"
         text = json.dumps(dict(item), ensure_ascii=True)
         with open(filename, "w") as fn:
             fn.write(text)
 
     def close_spider(self, spider):
-        print("执行order中close_spider")
         filenames = [self.tmp + filename for filename in os.listdir(self.tmp) if os.path.splitext(filename)[1]==".json"]
         filenames = sorted(filenames, reverse=True) # 从大到小 排序
-        print(filenames)
 
         for file in filenames:
-            print(f"正在将{file}写入数据库")
             with open(file, "r") as fn:
                 item = json.load(fn)
                 super().process_item(item, spider)
             os.remove(file)
-            print(f"文件{file}已删除")

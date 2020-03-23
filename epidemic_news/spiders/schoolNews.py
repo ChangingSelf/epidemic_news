@@ -30,7 +30,6 @@ def parse_article(parse_func):
 
     def self_wrapper(self, response, *args, **kwargs):
         loader = parse_func(self, response, *args, **kwargs)
-        print(f"文章链接:{response.url}")
 
         title, block_type, create_time, index = self.get_meta(response.meta)
         loader.add_value("title", title)
@@ -175,7 +174,6 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         next_url = response.urljoin(next_url)
         if 'javascript' not in next_url:
             # 如果还有下一页（末页的href是javascript:void(0);）
-            print(f"下一页:{next_url}")
             yield scrapy.Request(next_url,callback=self.parse,meta={'block_type':response.meta.get('block_type')},dont_filter=True)
 
     @parse_article
@@ -547,7 +545,6 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
             for img in imgs:
                 if "http" not in img:
                     img = response.urljoin(img)
-                print(f"下载图片{img}")
                 yield Request(img, callback=self.parse_img, meta={"type": "image", "article_url": response.url})
 
 
