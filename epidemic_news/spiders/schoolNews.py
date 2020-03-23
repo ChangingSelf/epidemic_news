@@ -127,9 +127,6 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6072/list.htm", meta={"block_type":"防治知识"}, dont_filter=True)
         # 拒绝谣言
         yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6073/list.htm", meta={"block_type":"拒绝谣言"}, dont_filter=True)
-        # # 测试 close_spider
-        # article_url = "https://mp.weixin.qq.com/s/j72DuFZENpk13zUypJfhjA"
-        # yield Request(url=article_url, meta={"block_type":"上级精神", "index":146, "title":"title", "create_time":"2020-02-18", "article_url":article_url}, callback=self.get_parse(article_url))
 
     def get_parse(self,url):
         '''
@@ -526,7 +523,7 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         '''
         image_item = items.ImageItem()
 
-        image_item["content"] = "img_content" #response.body
+        image_item["content"] = response.body
         image_item["article_url"] = response.meta.get("article_url")
         image_item["image_url"] = response.url
 

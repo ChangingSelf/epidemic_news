@@ -96,7 +96,7 @@ ITEM_PIPELINES = {
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
 # 使用test配置进行运行
-TEST_MODE = True
+TEST_MODE = False
 
 # 配置最大线程数量：
 REACTOR_THREADPOOL_MAXSIZE = 100
