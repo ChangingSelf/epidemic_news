@@ -66,10 +66,12 @@ DOWNLOADER_MIDDLEWARES = {
 
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
+# 是否要求顺序写入(用于第一次写入)
+ITEM_ORDER = True
 ITEM_PIPELINES = {
     'epidemic_news.pipelines.ImagePipeline': 100,
     'epidemic_news.pipelines.PrepareItemsPipeline': 200,
-    'epidemic_news.pipelines.WriteNewsPipeline': 300,
+    'epidemic_news.pipelines.OrderWriteNewsPipeline' if ITEM_ORDER else 'epidemic_news.pipelines.WriteNewsPipeline' : 300,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -106,8 +108,11 @@ else:
     LOG_LEVEL = 'ERROR'
     LOG_FILE = 'log.txt'
 
+# 临时文件夹
+TMP_DIR_PATH = '/home/py/spider/epidemic_news/epidemic_news/tmp/'
+
 # 数据库相关配置
-DB_CONFIG_PATH = '/home/py/spider/epidemic_news/epidemic_news/config.conf',
+DB_CONFIG_PATH = '/home/py/spider/epidemic_news/epidemic_news/config.conf'
 if TEST_MODE:
     MYSQL_CONFIG_SECTION = 'mysql_test'
     REDIS_CONFIG_SECTION = 'redis_test'
@@ -121,3 +126,6 @@ REDIS_CONFIG_KEY = 'redis_key'
 CHANNEL_ID = {
     "schoolNews": 56,
 }
+
+# 超时 设置为30s
+DOWNLOAD_TIMEOUT = 30

@@ -36,8 +36,12 @@ def dispose_time(format='%Y-%m-%d'):
             tupletime = time.strptime(time_str,format)
             return int(time.mktime(tupletime))
         except ValueError:
-            logger.info("时间格式不匹配")
-            return None
+            try:
+                tupletime = time.strptime(time_str, '%Y-%m-%d')
+            except ValueError:
+                tupletime = time.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+            return int(time.mktime(tupletime))
+
     return func
 
 
@@ -129,6 +133,18 @@ class NhcGovItem(EpidemicNewsItem):
     '''
     pass
 
+class ShanxiGovItem(EpidemicNewsItem):
+    '''
+    陕西省人民政府网
+    '''
+    create_time = scrapy.Field(input_processor=MapCompose(str.strip, dispose_time('%Y-%m-%d %H:%M:%S')))
+
+class MemGovItem(EpidemicNewsItem):
+    '''
+    中国人民共和国应急管理部
+    '''
+    create_time = scrapy.Field(input_processor=MapCompose(str.strip, dispose_time('%Y-%m-%d %H:%M')))
+
 class CpcPeopleItem(EpidemicNewsItem):
     '''
     中国共产党新闻网
@@ -165,5 +181,11 @@ class ChinaCdcItem(EpidemicNewsItem):
     中国疾病预防控制中心
     '''
     pass
+
+class ChinaNewsItem(EpidemicNewsItem):
+    '''
+    中国新闻网
+    '''
+    create_time = scrapy.Field(input_processor=MapCompose(str.strip, dispose_time('%Y年%m月%d日 %H:%M')))
 
 

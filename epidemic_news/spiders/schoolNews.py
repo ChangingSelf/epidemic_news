@@ -5,7 +5,7 @@ import logging
 import scrapy
 from scrapy.http import Request
 from scrapy.shell import inspect_response
-from scrapy.exceptions import IgnoreRequest
+from scrapy.exceptions import IgnoreRequest, DropItem
 from scrapy.http.cookies import CookieJar
 
 from epidemic_news import items # shell
@@ -30,6 +30,7 @@ def parse_article(parse_func):
 
     def self_wrapper(self, response, *args, **kwargs):
         loader = parse_func(self, response, *args, **kwargs)
+        print(f"文章链接:{response.url}")
 
         title, block_type, create_time, index = self.get_meta(response.meta)
         loader.add_value("title", title)
@@ -71,9 +72,10 @@ class SpiderTools():
 class SchoolnewsSpider(scrapy.Spider, SpiderTools):
     name = 'schoolNews'
     allowed_domains = ['chd.edu.cn', 'www.univs.cn', 'mp.weixin.qq.com',
-                       'www.gov.cn', 'jyt.shaanxi.gov.cn', 'www.moe.gov.cn', 'www.xa.gov.cn', 'www.qinfeng.gov.cn','www.nhc.gov.cn',
+                       'www.gov.cn', 'jyt.shaanxi.gov.cn', 'www.moe.gov.cn', 'www.xa.gov.cn', 'www.qinfeng.gov.cn',
+                       'www.nhc.gov.cn','www.shaanxi.gov.cn', 'www.mem.gov.cn',
                        'cpc.people.com.cn', 'news.cnhubei.com', 'py.cnhubei.com', 'www.piyao.org.cn', 'www.xinhuanet.com',
-                       'www.chinacdc.cn']
+                       'www.chinacdc.cn', 'www.chinanews.com']
     # allowed_domains = ['chd.edu.cn', 'www.moe.gov.cn',]
 
     def __init__(self, name=None, **kwargs):
@@ -96,6 +98,8 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
             'www.moe.gov.cn': self.parse_moe_gov,
             'www.qinfeng.gov.cn': self.parse_qinfeng_gov,
             'www.nhc.gov.cn': self.parse_nhc_gov,
+            'www.shaanxi.gov.cn': self.parse_shanxi_gov,
+            'www.mem.gov.cn': self.parse_mem_gov,
 
             'cpc.people.com.cn': self.parse_cpc_people,
 
@@ -107,6 +111,8 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
             'www.xinhuanet.com': self.parse_xinhua,
 
             'www.chinacdc.cn': self.parse_china_cdc,
+
+            'www.chinanews.com': self.parse_chinanews,
         }#域名和解析函数的映射字典
 
     def start_requests(self):
@@ -122,6 +128,9 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6072/list.htm", meta={"block_type":"防治知识"}, dont_filter=True)
         # 拒绝谣言
         yield scrapy.Request(url="http://www.chd.edu.cn/yqfk/6073/list.htm", meta={"block_type":"拒绝谣言"}, dont_filter=True)
+        # # 测试 close_spider
+        # article_url = "https://mp.weixin.qq.com/s/j72DuFZENpk13zUypJfhjA"
+        # yield Request(url=article_url, meta={"block_type":"上级精神", "index":146, "title":"title", "create_time":"2020-02-18", "article_url":article_url}, callback=self.get_parse(article_url))
 
     def get_parse(self,url):
         '''
@@ -166,6 +175,7 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         next_url = response.urljoin(next_url)
         if 'javascript' not in next_url:
             # 如果还有下一页（末页的href是javascript:void(0);）
+            print(f"下一页:{next_url}")
             yield scrapy.Request(next_url,callback=self.parse,meta={'block_type':response.meta.get('block_type')},dont_filter=True)
 
     @parse_article
@@ -338,10 +348,10 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         '''
         loader = ItemLoader(item=items.NhcGovItem(), response=response)
 
-        article_metas = response.xpath("//div[class='list']//div[class='source']/span/text()").extract()
+        article_metas = response.xpath("//div[@class='list']//div[@class='source']/span/text()").extract()
         if not article_metas:
             cookjar.extract_cookies(response, response.request) # 提取cookies
-            yield scrapy.Request(response.url, callback=self.get_parse(response.url), meta=response.meta, dont_filter=True, cookies=cookjar)
+            yield scrapy.Request(response.url, callback=self.get_parse(response.url), meta=response.meta, cookies=cookjar)
         else:
             loader.add_value("create_time", article_metas[0], re='发布时间：([\w\W].*)')  # 发布时间： 2020-02-10
             loader.add_value("author", article_metas[1], re='来源：([\w\W]*)')  # 来源：
@@ -349,6 +359,40 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
             loader.add_xpath("img", "//div[@class='con']//img/@src")
 
             return loader
+
+    @parse_article
+    def parse_shanxi_gov(self, response):
+        '''
+        陕西省人民政府
+        解析域名：www.shaanxi.gov.cn
+        示例文章：http://www.shaanxi.gov.cn/sxxw/sxyw/160376.htm
+        '''
+        loader = ItemLoader(item=items.ShanxiGovItem(), response=response)
+
+        article_metas = response.xpath("//div[@class='info-attr']//span/text()").extract()
+        loader.add_value("create_time", article_metas[0])  # 2020-02-08 08:06:40
+        loader.add_value("author", article_metas[1])  # 陕西日报
+        loader.add_xpath("content", "//div[@class='info-cont']")
+        loader.add_xpath("img", "//div[@class='info-cont']//img/@src")
+
+        return loader
+
+    @parse_article
+    def parse_mem_gov(self, response):
+        '''
+        中国人民共和国应急管理部
+        解析域名：www.mem.gov.cn
+        示例文章：https://www.mem.gov.cn/kp/shaq/jtaq/202002/t20200207_344223.shtml
+        '''
+        loader = ItemLoader(item=items.MemGovItem(), response=response)
+
+        article_metas = response.xpath("//div[@class='time_laiy']/span/text()").extract()
+        loader.add_value("create_time", article_metas[0]) # 2020-02-07 11:43
+        loader.add_value("author", article_metas[1], re='来源：(.*)') # 来源：健康中国
+        loader.add_xpath("content", "//div[@class='TRS_Editor']")
+        loader.add_xpath("img", "//div[@class='TRS_Editor']//img/@src")
+
+        return loader
 
     @parse_article
     def parse_cpc_people(self, response):
@@ -448,7 +492,7 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         解析域名：www.chinacdc.cn
         示例文章：http://www.chinacdc.cn/jkzt/crb/zl/szkb_11803/jszl_2275/202002/t20200214_212668.html
         '''
-        loader = ItemLoader(item=items.XinhuaItem(), response=response)
+        loader = ItemLoader(item=items.ChinaCdcItem(), response=response)
 
         loader.add_xpath("create_time", "//span[@class='info-date']/text()")  # 2020-02-14
         loader.add_value("author", '中国疾病预防控制中心')  # 中国疾病预防控制中心
@@ -456,6 +500,25 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         loader.add_xpath("img", "//div[@class='TRS_Editor']//img/@src")
 
         return loader
+
+    @parse_article
+    def parse_chinanews(self, response):
+        '''
+        中国新闻网
+        解析域名：www.chinanews.com
+        示例文章：http://www.chinanews.com/sh/2020/02-09/9084200.shtml
+        '''
+        loader = ItemLoader(item=items.ChinaNewsItem(), response=response)
+
+        article_metas = response.xpath("//div[@class='left-t']//text()").extract()
+
+        loader.add_value("create_time", article_metas[0], re='.*\d{2}:\d{2}')  # 2020年02月09日 10:49
+        loader.add_value("author", article_metas[1])  # 中国新闻网
+        loader.add_xpath("content", "//div[@class='left_zw']")
+        loader.add_xpath("img", "//div[@class='left_zw']//img/@src")
+
+        return loader
+
 
     def parse_img(self,response):
         '''
@@ -465,14 +528,12 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         '''
         image_item = items.ImageItem()
 
-        image_item["content"] = response.body
+        image_item["content"] = "img_content" #response.body
         image_item["article_url"] = response.meta.get("article_url")
         image_item["image_url"] = response.url
 
-        # 下载图片失败, 可以重试一次
         if not response.body:
-            yield Request(response.url, callback=self.parse_img,
-                          meta={"type": "image", "article_url": image_item["article_url"]})
+            raise DropItem("图片下载失败")
         yield image_item
 
     def request_imgs(self, response, imgs):
@@ -486,7 +547,7 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
             for img in imgs:
                 if "http" not in img:
                     img = response.urljoin(img)
-                yield Request(img, callback=self.parse_img, dont_filter=True,
-                              meta={"type": "image", "article_url": response.url})
+                print(f"下载图片{img}")
+                yield Request(img, callback=self.parse_img, meta={"type": "image", "article_url": response.url})
 
 

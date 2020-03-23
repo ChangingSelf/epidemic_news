@@ -7,6 +7,8 @@
 import logging
 import time
 import os.path
+import json
+import os
 
 from scrapy.exceptions import DropItem
 
@@ -25,7 +27,7 @@ else:
 logger = logging.getLogger()
 
 
-class ImagePipeline(object):
+class ImagePipeline:
     '''
     对content和img字段中的图片链接进行处理
     对图片内容进行处理
@@ -47,7 +49,7 @@ class ImagePipeline(object):
             else:
                 logger.error("没有解析到图片,文章地址：{}，图片地址：{}".format(article_url,image_url))
 
-            raise DropItem
+            raise DropItem("image 处理完毕 丢弃")
         else:
             img_urls = item.get("img")
             content = item.get("content")
@@ -94,7 +96,7 @@ class ImagePipeline(object):
         return os.path.join(self.qiniu_url, self.image_name(img_url))
 
 
-class PrepareItemsPipeline(object):
+class PrepareItemsPipeline:
     '''
     | id | channel_id | model_id | title | flag | image | keywords | description | tags | weigh | views | comments
     | likes | dislikes | diyname | createtime | updatetime | publishtime | deletetime | status | power
@@ -142,7 +144,7 @@ class PrepareItemsPipeline(object):
         return item
 
 
-class WriteNewsPipeline(object):
+class WriteNewsPipeline:
     def open_spider(self,spider):
         # 获取 Spider 在redis中存储文章链接的 键
         self.key = self._redis_key(spider.name)
@@ -160,6 +162,9 @@ class WriteNewsPipeline(object):
 
         item['channel_id'] = self.channel_id
         archives_id = self.model.write_archives(**item)
+        if not item.get("content"):
+            logger.error(f"article_url:{item.get('article_url')},content为空")
+            return None
         if archives_id:
             addonnews_id = self.model.write_addonnews(archives_id, **item)
             if addonnews_id:
@@ -168,7 +173,6 @@ class WriteNewsPipeline(object):
                 logger.info(f"数据写入成功, id:{addonnews_id}, article_url:{item.get('article_url')}")
         else:
             logger.info("数据写入失败")
-        return item
 
     def _redis_key(self, name):
         '''
@@ -183,3 +187,33 @@ class WriteNewsPipeline(object):
             return channel_id
         else:
             raise KeyError("没有为Spider配置channel_id, 请查看settings.py")
+
+
+class OrderWriteNewsPipeline(WriteNewsPipeline):
+    def open_spider(self,spider):
+        self.tmp = spider.settings.get('TMP_DIR_PATH')
+        if not self.tmp:
+            raise ValueError("没有指定临时文件夹")
+        super().open_spider(spider)
+
+    def process_item(self, item, spider):
+        index = item.get("index")
+        print(f"正在写入json , index为{index}")
+        filename = f"{self.tmp}{index:0>5d}-{spider.name}.json"
+        text = json.dumps(dict(item), ensure_ascii=True)
+        with open(filename, "w") as fn:
+            fn.write(text)
+
+    def close_spider(self, spider):
+        print("执行order中close_spider")
+        filenames = [self.tmp + filename for filename in os.listdir(self.tmp) if os.path.splitext(filename)[1]==".json"]
+        filenames = sorted(filenames, reverse=True) # 从大到小 排序
+        print(filenames)
+
+        for file in filenames:
+            print(f"正在将{file}写入数据库")
+            with open(file, "r") as fn:
+                item = json.load(fn)
+                super().process_item(item, spider)
+            os.remove(file)
+            print(f"文件{file}已删除")
