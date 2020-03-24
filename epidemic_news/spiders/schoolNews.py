@@ -80,8 +80,8 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
                        'www.chinacdc.cn', 'www.chinanews.com']
     # allowed_domains = ['chd.edu.cn', 'www.moe.gov.cn',]
 
-    def __init__(self, name=None, **kwargs):
-        super().__init__(name=name, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.index = 0
 
         self.meta_keys = ["title", "block_type", "create_time", "index"]
@@ -118,7 +118,7 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
         }#域名和解析函数的映射字典
 
         # 用于判断 请求是否 已重复
-        key = config.read_redis_key(REDIS_CONFIG_KEY, spider_name=name)
+        key = config.read_redis_key(REDIS_CONFIG_KEY, spider_name=self.name)
         self.set = NewsSet(key)
 
     def start_requests(self):
@@ -181,6 +181,7 @@ class SchoolnewsSpider(scrapy.Spider, SpiderTools):
 
         # 当INCREACE_CRAWL为True 并且 有重复链接时 跳转到首页进行爬取
         if self.settings.get("INCREACE_CRAWL", True) and len(allow_requests) != len(requests):
+            self.logger.info("增量爬取")
             start_url = response.meta.get("start_url")
             yield scrapy.Request(start_url, meta=response.meta, dont_filter=True)
         else:
