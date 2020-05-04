@@ -7,10 +7,12 @@
 import logging
 import time
 import os.path
+import json
+import os
 
 from scrapy.exceptions import DropItem
 
-from epidemic_news.settings import REDIS_CONFIG_KEY, CHANNEL_ID, QINIU_CONFIG_SECTION, TEST_MODE
+from epidemic_news.settings import REDIS_CONFIG_KEY, CHANNEL_ID, QINIU_CONFIG_SECTION, TEST_MODE, REDIS_CONFIG_IMAGE_KEY
 from epidemic_news.items import ImageItem
 from epidemic_news.utils.config import config
 from epidemic_news.models.news_model import SpiderModel
@@ -25,12 +27,16 @@ else:
 logger = logging.getLogger()
 
 
-class ImagePipeline(object):
+class ImagePipeline:
     '''
     对content和img字段中的图片链接进行处理
     对图片内容进行处理
     '''
     def open_spider(self,spider):
+        # redis
+        self.image_key = self.key = config.read_redis_key(REDIS_CONFIG_IMAGE_KEY, spider_name=spider.name)
+        self.image_set = NewsSet(key=self.image_key)
+
         self.upload = UploadImage()
         # 获取七牛云的链接
         *_, self.qiniu_url = config.read_qiniu_conf(QINIU_CONFIG_SECTION)
@@ -44,10 +50,11 @@ class ImagePipeline(object):
             filename = self.image_name(image_url)
             if content:
                 self.upload.uplode(image_content=content,filename=filename)
+                self.image_set.sadd(image_url) # 将图片链接写入redis中, 防止重复爬取
             else:
                 logger.error("没有解析到图片,文章地址：{}，图片地址：{}".format(article_url,image_url))
 
-            raise DropItem
+            raise DropItem("image 处理完毕 丢弃")
         else:
             img_urls = item.get("img")
             content = item.get("content")
@@ -94,7 +101,7 @@ class ImagePipeline(object):
         return os.path.join(self.qiniu_url, self.image_name(img_url))
 
 
-class PrepareItemsPipeline(object):
+class PrepareItemsPipeline:
     '''
     | id | channel_id | model_id | title | flag | image | keywords | description | tags | weigh | views | comments
     | likes | dislikes | diyname | createtime | updatetime | publishtime | deletetime | status | power
@@ -142,10 +149,10 @@ class PrepareItemsPipeline(object):
         return item
 
 
-class WriteNewsPipeline(object):
+class WriteNewsPipeline:
     def open_spider(self,spider):
         # 获取 Spider 在redis中存储文章链接的 键
-        self.key = self._redis_key(spider.name)
+        self.key = config.read_redis_key(REDIS_CONFIG_KEY, spider_name=spider.name)
         # 获取 栏目ID
         self.channel_id = self._chnnel_id(spider.name)
         # 数据库实例化
@@ -160,6 +167,9 @@ class WriteNewsPipeline(object):
 
         item['channel_id'] = self.channel_id
         archives_id = self.model.write_archives(**item)
+        if not item.get("content"):
+            logger.error(f"article_url:{item.get('article_url')},content为空")
+            return None
         if archives_id:
             addonnews_id = self.model.write_addonnews(archives_id, **item)
             if addonnews_id:
@@ -168,13 +178,7 @@ class WriteNewsPipeline(object):
                 logger.info(f"数据写入成功, id:{addonnews_id}, article_url:{item.get('article_url')}")
         else:
             logger.info("数据写入失败")
-        return item
 
-    def _redis_key(self, name):
-        '''
-        返回Redis中 存储文章链接的集合 的 键key
-        '''
-        return config.read_redis_key(REDIS_CONFIG_KEY, name)
 
     def _chnnel_id(self, name):
         ''' 返回对应的channel_id '''
@@ -183,3 +187,31 @@ class WriteNewsPipeline(object):
             return channel_id
         else:
             raise KeyError("没有为Spider配置channel_id, 请查看settings.py")
+
+
+class OrderWriteNewsPipeline(WriteNewsPipeline):
+    def open_spider(self,spider):
+        self.tmp = spider.settings.get('TMP_DIR_PATH')
+        if not self.tmp:
+            raise ValueError("没有指定临时文件夹")
+        super().open_spider(spider)
+
+    def process_item(self, item, spider):
+        index = item.get("index")
+        filename = f"{self.tmp}{index:0>5d}-{spider.name}.json"
+        text = json.dumps(dict(item), ensure_ascii=True)
+        with open(filename, "w") as fn:
+            fn.write(text)
+
+    def close_spider(self, spider):
+        filenames = [self.tmp + filename for filename in os.listdir(self.tmp) if os.path.splitext(filename)[1]==".json"]
+        filenames = sorted(filenames, reverse=True) # 从大到小 排序
+
+        for file in filenames:
+            with open(file, "r") as fn:
+                item = json.load(fn)
+                try:
+                    super().process_item(item, spider)
+                except BaseException as e:
+                    logger.critical(f"order写入数据库报错{e}, article_url:{item.get('article_url')}")
+            os.remove(file)

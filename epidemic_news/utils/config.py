@@ -62,10 +62,11 @@ class ReadConfig(Single):
             url = self.config.get(section, "url")
             return access_key,secret_key,bucket_name,url
         else:
-            raise Exception("读取mysql配置出现错误")
+            raise Exception("七牛云配置出现错误")
 
 config = ReadConfig(config_path=DB_CONFIG_PATH)
 
 if __name__ == '__main__':
-    from epidemic_news.settings import REDIS_CONFIG_SECTION
+    from epidemic_news.settings import REDIS_CONFIG_SECTION, REDIS_CONFIG_KEY
     config.read_redis_conf(REDIS_CONFIG_SECTION)
+    print(config.read_redis_key(REDIS_CONFIG_KEY, 'schoolNews'))

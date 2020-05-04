@@ -241,4 +241,9 @@ gen
 .idea/
 epidemic_news/log.txt
 epidemic_news/config.conf
+
 log.txt
+
+epidemic_news/tmp/
+run_news.sh
+
